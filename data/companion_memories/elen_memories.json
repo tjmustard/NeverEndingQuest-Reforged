@@ -1,0 +1,151 @@
+{
+  "npc_name": "Elen",
+  "core_memories": [
+    {
+      "id": "elen_mem_123",
+      "timestamp": "1492 Springmonth 25 07:04:00",
+      "location": "Tideworn Gate (AD06)",
+      "npc_name": "Elen",
+      "trigger_actions": [
+        "shared camaraderie",
+        "showed generosity",
+        "unified united",
+        "kept watch",
+        "s point"
+      ],
+      "emotional_vector": {
+        "trust": 0.7,
+        "power": 0.2,
+        "intimacy": 0.2,
+        "fear": 0.0,
+        "respect": 0.5
+      },
+      "emotional_velocity": 0.91,
+      "journal_excerpt": "...he source of the Drowned King's corrupt power that has tainted these lands.\n\nOur group--Scout Kira, Elen, and myself, Ranger Thane--spent the first moments reviewing our plan with quiet intensity. ",
+      "context": "Positive interaction at Tideworn Gate (AD06)",
+      "mass": 1.09,
+      "decay_resistance": 1.0,
+      "cascade_type": "CONFIRMATION",
+      "interaction_number": 71
+    },
+    {
+      "id": "elen_mem_250",
+      "timestamp": "1492 Springmonth 25 07:04:00",
+      "location": "Tideworn Gate (AD06)",
+      "npc_name": "Elen",
+      "trigger_actions": [
+        "shared camaraderie",
+        "unified united",
+        "s point",
+        "kept watch",
+        "showed generosity"
+      ],
+      "emotional_vector": {
+        "trust": 0.7,
+        "power": 0.2,
+        "intimacy": 0.2,
+        "fear": 0.0,
+        "respect": 0.5
+      },
+      "emotional_velocity": 0.91,
+      "journal_excerpt": "...he source of the Drowned King's corrupt power that has tainted these lands.\n\nOur group--Scout Kira, Elen, and myself, Ranger Thane--spent the first moments reviewing our plan with quiet intensity. ",
+      "context": "Positive interaction at Tideworn Gate (AD06)",
+      "mass": 1.09,
+      "decay_resistance": 1.0,
+      "cascade_type": "CONFIRMATION",
+      "interaction_number": 71
+    },
+    {
+      "id": "elen_mem_041",
+      "timestamp": "1492 Springmonth 6 18:21:00",
+      "location": "Harrow's Hollow General Store",
+      "npc_name": "Elen",
+      "trigger_actions": [
+        "banter exchange",
+        "unified united",
+        "s hope",
+        "shared camaraderie"
+      ],
+      "emotional_vector": {
+        "trust": 0.7000000000000001,
+        "power": 0.0,
+        "intimacy": 0.4,
+        "fear": 0.0,
+        "respect": 0.2
+      },
+      "emotional_velocity": 0.83,
+      "journal_excerpt": "..., Elder Mirna greeted us with tears welling in her eyes--tears of relief and renewed hope at seeing Elen alive and well. Her embrace was warm and sincere, a balm after the long and perilous journey",
+      "context": "Positive interaction at Harrow's Hollow General Store",
+      "mass": 1.25,
+      "decay_resistance": 1.0,
+      "cascade_type": "REVERSAL",
+      "interaction_number": 26
+    },
+    {
+      "id": "elen_mem_168",
+      "timestamp": "1492 Springmonth 6 18:21:00",
+      "location": "Harrow's Hollow General Store",
+      "npc_name": "Elen",
+      "trigger_actions": [
+        "shared camaraderie",
+        "unified united",
+        "banter exchange",
+        "s hope"
+      ],
+      "emotional_vector": {
+        "trust": 0.7000000000000001,
+        "power": 0.0,
+        "intimacy": 0.4,
+        "fear": 0.0,
+        "respect": 0.2
+      },
+      "emotional_velocity": 0.83,
+      "journal_excerpt": "..., Elder Mirna greeted us with tears welling in her eyes--tears of relief and renewed hope at seeing Elen alive and well. Her embrace was warm and sincere, a balm after the long and perilous journey",
+      "context": "Positive interaction at Harrow's Hollow General Store",
+      "mass": 1.0,
+      "decay_resistance": 1.0,
+      "cascade_type": "CONFIRMATION",
+      "interaction_number": 26
+    },
+    {
+      "id": "elen_mem_127",
+      "timestamp": "1492 Springmonth 28 10:14:00",
+      "location": "The Black Lantern Hearth (AD01)",
+      "npc_name": "Elen",
+      "trigger_actions": [
+        "unified united",
+        "admitted vulnerability",
+        "shared camaraderie"
+      ],
+      "emotional_vector": {
+        "trust": 0.6000000000000001,
+        "power": 0.0,
+        "intimacy": 0.5,
+        "fear": 0.0,
+        "respect": 0.1
+      },
+      "emotional_velocity": 0.79,
+      "journal_excerpt": "...d silence for a heartbeat before erupting into applause and laughter. Kira whistled appreciatively, Elen gave a crisp salute, and Thane's hearty chuckle filled the room. This simple feat became an ",
+      "context": "Positive interaction at The Black Lantern Hearth (AD01)",
+      "mass": 0.94,
+      "decay_resistance": 1.0,
+      "cascade_type": "CONFIRMATION",
+      "interaction_number": 78
+    }
+  ],
+  "current_emotional_state": {
+    "trust": 1.0,
+    "power": 1.0,
+    "intimacy": 1.0,
+    "fear": 0.8,
+    "respect": 1.0
+  },
+  "behavioral_model": {
+    "protector_vs_exploiter": 0.0,
+    "consistent_vs_chaotic": 0.0,
+    "generous_vs_greedy": 1.0,
+    "truthful_vs_deceptive": -1.0,
+    "violent_vs_peaceful": 0.0
+  },
+  "total_interactions": 406
+}

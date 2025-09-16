@@ -1,0 +1,143 @@
+{
+  "npc_name": "Thane",
+  "core_memories": [
+    {
+      "id": "thane_mem_039",
+      "timestamp": "1492 Springmonth 6 15:19:00",
+      "location": "Guard Post",
+      "npc_name": "Thane",
+      "trigger_actions": [
+        "last stand",
+        "resolve determination"
+      ],
+      "emotional_vector": {
+        "trust": 0.6000000000000001,
+        "power": 0.2,
+        "intimacy": 0.0,
+        "fear": 0.0,
+        "respect": 0.7
+      },
+      "emotional_velocity": 0.94,
+      "journal_excerpt": "Upon entering the Guard Post, Eirik Hearthwise and Ranger Thane found themselves in a dimly lit chamber heavy with the weight of past strife; overturned benches, s...",
+      "context": "Positive interaction at Guard Post",
+      "mass": 1.42,
+      "decay_resistance": 1.0,
+      "cascade_type": "REVERSAL",
+      "interaction_number": 12
+    },
+    {
+      "id": "thane_mem_166",
+      "timestamp": "1492 Springmonth 6 15:19:00",
+      "location": "Guard Post",
+      "npc_name": "Thane",
+      "trigger_actions": [
+        "last stand",
+        "resolve determination"
+      ],
+      "emotional_vector": {
+        "trust": 0.6000000000000001,
+        "power": 0.2,
+        "intimacy": 0.0,
+        "fear": 0.0,
+        "respect": 0.7
+      },
+      "emotional_velocity": 0.94,
+      "journal_excerpt": "Upon entering the Guard Post, Eirik Hearthwise and Ranger Thane found themselves in a dimly lit chamber heavy with the weight of past strife; overturned benches, s...",
+      "context": "Positive interaction at Guard Post",
+      "mass": 0.94,
+      "decay_resistance": 1.0,
+      "cascade_type": null,
+      "interaction_number": 12
+    },
+    {
+      "id": "thane_mem_122",
+      "timestamp": "1492 Springmonth 25 06:59:00",
+      "location": "Tideworn Gate",
+      "npc_name": "Thane",
+      "trigger_actions": [
+        "resolve determination",
+        "showed generosity",
+        "shared camaraderie"
+      ],
+      "emotional_vector": {
+        "trust": 0.6000000000000001,
+        "power": 0.0,
+        "intimacy": 0.2,
+        "fear": 0.0,
+        "respect": 0.4
+      },
+      "emotional_velocity": 0.75,
+      "journal_excerpt": "...scent of damp earth, setting an eerie yet resolute atmosphere as Scout Kira, Scout Elen, and Ranger Thane prepared for their investigation into the nearby Abbey Ruins, intent on uncovering the cult",
+      "context": "Positive interaction at Tideworn Gate",
+      "mass": 0.9,
+      "decay_resistance": 1.0,
+      "cascade_type": "CONFIRMATION",
+      "interaction_number": 61
+    },
+    {
+      "id": "thane_mem_249",
+      "timestamp": "1492 Springmonth 25 06:59:00",
+      "location": "Tideworn Gate",
+      "npc_name": "Thane",
+      "trigger_actions": [
+        "resolve determination",
+        "shared camaraderie",
+        "showed generosity"
+      ],
+      "emotional_vector": {
+        "trust": 0.6000000000000001,
+        "power": 0.0,
+        "intimacy": 0.2,
+        "fear": 0.0,
+        "respect": 0.4
+      },
+      "emotional_velocity": 0.75,
+      "journal_excerpt": "...scent of damp earth, setting an eerie yet resolute atmosphere as Scout Kira, Scout Elen, and Ranger Thane prepared for their investigation into the nearby Abbey Ruins, intent on uncovering the cult",
+      "context": "Positive interaction at Tideworn Gate",
+      "mass": 0.9,
+      "decay_resistance": 1.0,
+      "cascade_type": "CONFIRMATION",
+      "interaction_number": 61
+    },
+    {
+      "id": "thane_mem_117",
+      "timestamp": "1492 Springmonth 25 06:54:00",
+      "location": "The Black Lantern Hearth",
+      "npc_name": "Thane",
+      "trigger_actions": [
+        "banter exchange",
+        "showed generosity",
+        "shared camaraderie"
+      ],
+      "emotional_vector": {
+        "trust": 0.5,
+        "power": 0.0,
+        "intimacy": 0.4,
+        "fear": 0.0,
+        "respect": 0.2
+      },
+      "emotional_velocity": 0.67,
+      "journal_excerpt": "...steady presence and gentle words offered comfort; Elen observed quietly with a knowing smile, while Thane remained watchful, his gaze distant yet protective. As they rested, the group reflected on ",
+      "context": "Positive interaction at The Black Lantern Hearth",
+      "mass": 0.87,
+      "decay_resistance": 1.0,
+      "cascade_type": "COMPLEXITY",
+      "interaction_number": 59
+    }
+  ],
+  "current_emotional_state": {
+    "trust": 0.6,
+    "power": 0.9,
+    "intimacy": 1.0,
+    "fear": 0.8,
+    "respect": 0.7
+  },
+  "behavioral_model": {
+    "protector_vs_exploiter": 0.0,
+    "consistent_vs_chaotic": 0.0,
+    "generous_vs_greedy": 1.0,
+    "truthful_vs_deceptive": -1.0,
+    "violent_vs_peaceful": 0.0
+  },
+  "total_interactions": 314
+}
