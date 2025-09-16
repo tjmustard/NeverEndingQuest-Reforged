@@ -1,0 +1,144 @@
+{
+  "npc_name": "Kira",
+  "core_memories": [
+    {
+      "id": "kira_mem_012",
+      "timestamp": "1492 Springmonth 1 13:32:00",
+      "location": "Rangers' Command Post (RO01)",
+      "npc_name": "Kira",
+      "trigger_actions": [
+        "resolve determination",
+        "shared camaraderie",
+        "confided confessed",
+        "comforted",
+        "stories experiences"
+      ],
+      "emotional_vector": {
+        "trust": 0.8,
+        "power": 0.0,
+        "intimacy": 1.0,
+        "fear": 0.0,
+        "respect": 0.2
+      },
+      "emotional_velocity": 1.3,
+      "journal_excerpt": "...he oppressive silence of the wilderness we'd just crossed.\n\nUpon entering, I immediately sought out Kira to check on her condition and readiness. She stood near the armory, her leather quiver shift",
+      "context": "Positive interaction at Rangers' Command Post (RO01)",
+      "mass": 1.56,
+      "decay_resistance": 1.0,
+      "cascade_type": "CONFIRMATION",
+      "interaction_number": 20
+    },
+    {
+      "id": "kira_mem_015",
+      "timestamp": "1492 Springmonth 2 00:05:00",
+      "location": "Rangers' Command Post",
+      "npc_name": "Kira",
+      "trigger_actions": [
+        "unified united",
+        "s hope",
+        "shared camaraderie",
+        "deepened bond"
+      ],
+      "emotional_vector": {
+        "trust": 0.8,
+        "power": 0.0,
+        "intimacy": 0.4,
+        "fear": 0.0,
+        "respect": 0.2
+      },
+      "emotional_velocity": 0.92,
+      "journal_excerpt": "Upon entering the sunlit courtyard of the Rangers' Command Post, Eirik and Kira were met with an atmosphere of renewed hope and quiet pride, underscored by the clear, triumphant t...",
+      "context": "Positive interaction at Rangers' Command Post",
+      "mass": 1.37,
+      "decay_resistance": 1.0,
+      "cascade_type": "REVERSAL",
+      "interaction_number": 29
+    },
+    {
+      "id": "kira_mem_016",
+      "timestamp": "1492 Springmonth 2 01:24:00",
+      "location": "Ambush Site (TW01)",
+      "npc_name": "Kira",
+      "trigger_actions": [
+        "callous heartless"
+      ],
+      "emotional_vector": {
+        "trust": -0.6,
+        "power": 0.0,
+        "intimacy": 0.0,
+        "fear": 0.4,
+        "respect": -0.4
+      },
+      "emotional_velocity": 0.82,
+      "journal_excerpt": "...gering like a silent scream, a mute testament to the ferocity of the conflict that had transpired.\n\nKira's keen eyes immediately went to surveying the ground and trees. She spotted bandit boot prin",
+      "context": "Negative encounter at Ambush Site (TW01)",
+      "mass": 0.99,
+      "decay_resistance": 1.0,
+      "cascade_type": "CONFIRMATION",
+      "interaction_number": 33
+    },
+    {
+      "id": "kira_mem_032",
+      "timestamp": "1492 Springmonth 7 15:32:00",
+      "location": "The Black Lantern Hearth",
+      "npc_name": "Kira",
+      "trigger_actions": [
+        "callous heartless"
+      ],
+      "emotional_vector": {
+        "trust": -0.6,
+        "power": 0.0,
+        "intimacy": 0.0,
+        "fear": 0.4,
+        "respect": -0.4
+      },
+      "emotional_velocity": 0.82,
+      "journal_excerpt": "...fears, and Captain Merek, haunted by visions and loss at sea. Central to their attention was Scout Kira, shackled and forced into degrading performances under the avaricious eye of Grimjaw, the tav",
+      "context": "Negative encounter at The Black Lantern Hearth",
+      "mass": 0.99,
+      "decay_resistance": 1.0,
+      "cascade_type": "CONFIRMATION",
+      "interaction_number": 60
+    },
+    {
+      "id": "kira_mem_076",
+      "timestamp": "1492 Springmonth 25 06:59:00",
+      "location": "The Black Lantern Hearth (AD01)",
+      "npc_name": "Kira",
+      "trigger_actions": [
+        "shared camaraderie",
+        "confided confessed",
+        "showed generosity"
+      ],
+      "emotional_vector": {
+        "trust": 0.6000000000000001,
+        "power": 0.0,
+        "intimacy": 0.5,
+        "fear": 0.0,
+        "respect": 0.2
+      },
+      "emotional_velocity": 0.81,
+      "journal_excerpt": "...from wounds and exhaustion. Upon settling near the hearth's warm glow, he found solace beside Scout Kira. In a rare moment of vulnerability, he wrapped his arms gently around her, resting his head ",
+      "context": "Positive interaction at The Black Lantern Hearth (AD01)",
+      "mass": 0.97,
+      "decay_resistance": 1.0,
+      "cascade_type": "CONFIRMATION",
+      "interaction_number": 109
+    }
+  ],
+  "current_emotional_state": {
+    "trust": 1.0,
+    "power": 1.0,
+    "intimacy": 1.0,
+    "fear": 1.0,
+    "respect": 1.0
+  },
+  "behavioral_model": {
+    "protector_vs_exploiter": 0.0,
+    "consistent_vs_chaotic": 0.0,
+    "generous_vs_greedy": 1.0,
+    "truthful_vs_deceptive": 0.09999999999999998,
+    "violent_vs_peaceful": 0.0
+  },
+  "total_interactions": 231
+}

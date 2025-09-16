@@ -1,0 +1,135 @@
+FULL KIRA MEMORY DATA FOR AI INJECTION
+================================================================================
+
+=== KIRA MEMORY PROFILE ===
+
+CURRENT EMOTIONAL STATE:
+  trust: 1.000
+  power: 0.429
+  intimacy: 0.937
+  fear: 0.004
+  respect: 0.922
+
+BEHAVIORAL MODEL:
+  generous vs greedy: 1.0 (leans toward generous)
+  truthful vs deceptive: 0.6 (leans toward truthful)
+  violent vs peaceful: -0.5 (leans toward peaceful)
+
+INTERACTION STATISTICS:
+  Total Interactions: 217
+  Core Memories Formed: 5
+
+CORE MEMORIES (5 total):
+------------------------------------------------------------
+
+Memory #1: kira_mem_011
+  When: 1492 Springmonth 1 13:32:00
+  Where: Rangers' Command Post (RO01)
+  What Happened:
+    - provided comfort
+    - shared camaraderie
+    - admitted vulnerability
+    - stories experiences
+    - resolve determination
+  Emotional Impact:
+    trust: +0.80
+    intimacy: +1.00
+    respect: +0.20
+  Memory Strength:
+    - Emotional Velocity: 1.300
+    - Mass: 1.560
+    - Decay Resistance: 1.0
+    - Cascade Type: CONFIRMATION
+  Journal Context: "...he oppressive silence of the wilderness we'd just crossed.
+
+Upon entering, I immediately sought out Kira to check on her condition and readiness. S..."
+  Summary: Positive interaction at Rangers' Command Post (RO01)
+------------------------------------------------------------
+
+Memory #2: kira_mem_085
+  When: 1492 Springmonth 24 19:15:00
+  Where: Sanctum of Sable Flames
+  What Happened:
+    - banter exchange
+    - shared camaraderie
+    - shared kiss
+    - coordinated attack
+  Emotional Impact:
+    trust: +0.80
+    intimacy: +0.90
+    respect: +0.20
+  Memory Strength:
+    - Emotional Velocity: 1.220
+    - Mass: 1.460
+    - Decay Resistance: 1.0
+    - Cascade Type: CONFIRMATION
+  Journal Context: "...he clang of rusted weapons and bursts of radiant flame. Despite injuries--most notably to Thane and Kira, whose wounds were tended with healing mag..."
+  Summary: Positive interaction at Sanctum of Sable Flames
+------------------------------------------------------------
+
+Memory #3: kira_mem_050
+  When: 1492 Springmonth 8 02:01:00
+  Where: The Black Lantern Hearth (AD01)
+  What Happened:
+    - provided comfort
+    - offered reassurance
+    - shared kiss
+  Emotional Impact:
+    trust: +0.50
+    intimacy: +0.90
+  Memory Strength:
+    - Emotional Velocity: 1.030
+    - Mass: 1.030
+    - Decay Resistance: 1.0
+  Journal Context: "...ry yet relieved at our arrival.
+
+Eirik, weary yet steady, found a moment to share a quiet word with Kira. He offered reassurance, his voice low and..."
+  Summary: Positive interaction at The Black Lantern Hearth (AD01)
+------------------------------------------------------------
+
+Memory #4: kira_mem_015
+  When: 1492 Springmonth 2 00:05:00
+  Where: Rangers' Command Post
+  What Happened:
+    - deepened bond
+    - s hope
+    - shared camaraderie
+    - unified united
+  Emotional Impact:
+    trust: +0.80
+    intimacy: +0.40
+    respect: +0.20
+  Memory Strength:
+    - Emotional Velocity: 0.920
+    - Mass: 1.100
+    - Decay Resistance: 1.0
+    - Cascade Type: CONFIRMATION
+  Journal Context: "Upon entering the sunlit courtyard of the Rangers' Command Post, Eirik and Kira were met with an atmosphere of renewed hope and quiet pride, underscor..."
+  Summary: Positive interaction at Rangers' Command Post
+------------------------------------------------------------
+
+Memory #5: kira_mem_044
+  When: 1492 Springmonth 7 15:42:00
+  Where: The Black Lantern Hearth (AD01)
+  What Happened:
+    - showed cruelty
+    - shared camaraderie
+    - shared kiss
+  Emotional Impact:
+    trust: -0.20
+    intimacy: +0.70
+    fear: +0.40
+    respect: -0.40
+  Memory Strength:
+    - Emotional Velocity: 0.920
+    - Mass: 0.920
+    - Decay Resistance: 1.0
+  Journal Context: "...nd dangers.
+
+At dawn, our attention turned to a figure who stirred a complex mix of emotions--Scout Kira. Once a trusted ally, she was now shackled..."
+  Summary: Mixed interactions at The Black Lantern Hearth (AD01)
+------------------------------------------------------------
+
+================================================================================
+Total characters: 3929
+Estimated tokens: ~982

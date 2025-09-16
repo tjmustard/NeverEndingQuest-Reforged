@@ -1,0 +1,12 @@
+{
+  "player": "Rose",
+  "module": "Keep_of_Doom",
+  "npc_name": "Kira",
+  "core_memories": [],
+  "current_emotional_state": {},
+  "behavioral_model": {},
+  "relationship_status": [
+    "Acquaintance"
+  ],
+  "total_interactions": 2
+}
