@@ -31,8 +31,8 @@
       "location": "Tideworn Gate",
       "npc_name": "Thane",
       "trigger_actions": [
-        "shared camaraderie",
         "showed generosity",
+        "shared camaraderie",
         "resolve determination"
       ],
       "emotional_vector": {
@@ -56,9 +56,9 @@
       "location": "The Black Lantern Hearth",
       "npc_name": "Thane",
       "trigger_actions": [
-        "banter exchange",
+        "showed generosity",
         "shared camaraderie",
-        "showed generosity"
+        "banter exchange"
       ],
       "emotional_vector": {
         "trust": 0.5,
@@ -81,9 +81,9 @@
       "location": "The Black Lantern Hearth",
       "npc_name": "Thane",
       "trigger_actions": [
-        "shared camaraderie",
+        "unified united",
         "shared laughter",
-        "unified united"
+        "shared camaraderie"
       ],
       "emotional_vector": {
         "trust": 0.5,
@@ -106,8 +106,8 @@
       "location": "The Black Lantern Hearth (AD01)",
       "npc_name": "Thane",
       "trigger_actions": [
-        "provided comfort",
-        "shared camaraderie"
+        "shared camaraderie",
+        "provided comfort"
       ],
       "emotional_vector": {
         "trust": 0.30000000000000004,

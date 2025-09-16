@@ -7,8 +7,8 @@
       "location": "Rangers' Command Post (RO01)",
       "npc_name": "Kira",
       "trigger_actions": [
-        "provided comfort",
         "shared camaraderie",
+        "provided comfort",
         "admitted vulnerability",
         "stories experiences",
         "resolve determination"
@@ -34,10 +34,10 @@
       "location": "Sanctum of Sable Flames",
       "npc_name": "Kira",
       "trigger_actions": [
-        "banter exchange",
+        "coordinated attack",
         "shared camaraderie",
-        "shared kiss",
-        "coordinated attack"
+        "banter exchange",
+        "shared kiss"
       ],
       "emotional_vector": {
         "trust": 0.7999999999999999,
@@ -60,9 +60,9 @@
       "location": "The Black Lantern Hearth (AD01)",
       "npc_name": "Kira",
       "trigger_actions": [
+        "shared kiss",
         "provided comfort",
-        "offered reassurance",
-        "shared kiss"
+        "offered reassurance"
       ],
       "emotional_vector": {
         "trust": 0.5,
@@ -85,10 +85,10 @@
       "location": "Rangers' Command Post",
       "npc_name": "Kira",
       "trigger_actions": [
-        "deepened bond",
-        "s hope",
+        "unified united",
         "shared camaraderie",
-        "unified united"
+        "s hope",
+        "deepened bond"
       ],
       "emotional_vector": {
         "trust": 0.8,
