@@ -7,11 +7,11 @@
       "location": "Rangers' Command Post (RO01)",
       "npc_name": "Kira",
       "trigger_actions": [
-        "shared camaraderie",
-        "provided comfort",
-        "admitted vulnerability",
         "stories experiences",
-        "resolve determination"
+        "provided comfort",
+        "shared camaraderie",
+        "resolve determination",
+        "admitted vulnerability"
       ],
       "emotional_vector": {
         "trust": 0.8,
@@ -35,9 +35,9 @@
       "npc_name": "Kira",
       "trigger_actions": [
         "coordinated attack",
+        "shared kiss",
         "shared camaraderie",
-        "banter exchange",
-        "shared kiss"
+        "banter exchange"
       ],
       "emotional_vector": {
         "trust": 0.7999999999999999,
@@ -86,9 +86,9 @@
       "npc_name": "Kira",
       "trigger_actions": [
         "unified united",
+        "deepened bond",
         "shared camaraderie",
-        "s hope",
-        "deepened bond"
+        "s hope"
       ],
       "emotional_vector": {
         "trust": 0.8,
@@ -111,9 +111,9 @@
       "location": "The Black Lantern Hearth (AD01)",
       "npc_name": "Kira",
       "trigger_actions": [
+        "shared kiss",
         "showed cruelty",
-        "shared camaraderie",
-        "shared kiss"
+        "shared camaraderie"
       ],
       "emotional_vector": {
         "trust": -0.19999999999999996,

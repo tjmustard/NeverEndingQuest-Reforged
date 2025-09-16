@@ -7,11 +7,11 @@
       "location": "Tideworn Gate (AD06)",
       "npc_name": "Elen",
       "trigger_actions": [
-        "unified united",
-        "s point",
         "shared camaraderie",
         "showed generosity",
-        "kept watch"
+        "kept watch",
+        "unified united",
+        "s point"
       ],
       "emotional_vector": {
         "trust": 0.7,
@@ -34,10 +34,10 @@
       "location": "Harrow's Hollow General Store",
       "npc_name": "Elen",
       "trigger_actions": [
+        "banter exchange",
         "unified united",
-        "s hope",
         "shared camaraderie",
-        "banter exchange"
+        "s hope"
       ],
       "emotional_vector": {
         "trust": 0.7000000000000001,
@@ -60,8 +60,8 @@
       "location": "The Black Lantern Hearth (AD01)",
       "npc_name": "Elen",
       "trigger_actions": [
-        "unified united",
         "admitted vulnerability",
+        "unified united",
         "shared camaraderie"
       ],
       "emotional_vector": {
@@ -85,9 +85,9 @@
       "location": "Shroudwatch Garrison",
       "npc_name": "Elen",
       "trigger_actions": [
-        "showed generosity",
+        "resolve determination",
         "shared camaraderie",
-        "resolve determination"
+        "showed generosity"
       ],
       "emotional_vector": {
         "trust": 0.6000000000000001,
@@ -110,9 +110,9 @@
       "location": "The Black Lantern Hearth (AD01)",
       "npc_name": "Elen",
       "trigger_actions": [
+        "resolve determination",
         "unified united",
-        "shared camaraderie",
-        "resolve determination"
+        "shared camaraderie"
       ],
       "emotional_vector": {
         "trust": 0.6000000000000001,
