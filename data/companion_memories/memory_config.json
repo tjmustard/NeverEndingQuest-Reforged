@@ -2,10 +2,10 @@
   "crystallization_threshold": 0.35,
   "max_memories_per_npc": 5,
   "retrieval_pull_threshold": 0.1,
-  "total_memories_created": 254,
+  "total_memories_created": 114,
   "npc_interaction_counts": {
-    "Elen": 406,
-    "Kira": 462,
-    "Thane": 314
+    "Elen": 186,
+    "Kira": 217,
+    "Thane": 149
   }
 }
