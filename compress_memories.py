@@ -188,19 +188,67 @@ def create_compressed_file():
                 compressed_npc = compress_npc_data(npc_data)
                 npcs.append(compressed_npc)
 
-    # Build final compressed structure
-    compressed = {
-        **spec,
-        "npcs": npcs
-    }
+    # Determine what legend/spec elements are actually needed
+    used_actions = set()
+    has_cascade_types = False
+    has_decay_resistance = False
+
+    # Scan through all NPCs to see what's actually used
+    for npc in npcs:
+        for mem in npc.get('mem', []):
+            # Collect used action codes
+            for action_code in mem.get('a', []):
+                if not action_code.startswith('?'):  # Skip unknown actions
+                    used_actions.add(action_code)
+            # Check for optional fields
+            if 'ct' in mem:
+                has_cascade_types = True
+            if 'dr' in mem:
+                has_decay_resistance = True
+
+    # Build minimal spec with only what's needed
+    minimal_spec = {}
+
+    # Only include action map for actions actually used
+    if used_actions:
+        # Reverse lookup to get only needed action definitions
+        action_subset = {}
+        for action, code in ACTION_MAP.items():
+            if code in used_actions:
+                action_subset[action] = code
+
+        if action_subset:
+            minimal_spec["act"] = action_subset
+
+    # Only include field definitions if we have complex memories
+    total_memories = sum(len(npc.get('mem', [])) for npc in npcs)
+
+    if total_memories > 5:  # Include basic legend for larger datasets
+        minimal_spec["es"] = ["trust", "power", "intimacy", "fear", "respect"]
+
+    if total_memories > 10:  # Include behavioral model for very large datasets
+        minimal_spec["bm"] = ["protector", "consistent", "generous", "truthful", "peaceful"]
+
+    if has_cascade_types:
+        minimal_spec["ct"] = ["CONFIRMATION", "REVERSAL", "COMPLEXITY", None]
+
+    # Build final compressed structure based on size
+    original_size = sum(os.path.getsize(f) for f in memory_dir.glob("*_memories.json") if f.stem != "memories_compressed")
+
+    if minimal_spec:  # Only include spec if we have something to include
+        compressed = {
+            "spec": minimal_spec,
+            "npcs": npcs
+        }
+    else:  # Ultra-minimal for tiny datasets
+        compressed = {"npcs": npcs}
 
     # Save compressed version
     output_path = memory_dir / "memories_compressed.json"
     with open(output_path, 'w') as f:
         json.dump(compressed, f, separators=(',', ':'), ensure_ascii=True)
 
-    # Calculate compression ratio
-    original_size = sum(os.path.getsize(f) for f in memory_dir.glob("*_memories.json"))
+    # Recalculate after saving
     compressed_size = os.path.getsize(output_path)
     ratio = (1 - compressed_size / original_size) * 100
 
