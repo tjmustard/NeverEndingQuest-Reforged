@@ -624,6 +624,20 @@ def update_journal_with_summary(adventure_summary, party_tracker_data, location_
 
                 if memories_created:
                     debug_print(f"Created memories for: {', '.join(memories_created.keys())}")
+
+                    # Auto-compress the memories for AI consumption
+                    try:
+                        import subprocess
+                        result = subprocess.run(
+                            ["python", "compress_memories.py"],
+                            capture_output=True,
+                            text=True,
+                            timeout=5
+                        )
+                        if result.returncode == 0:
+                            debug_print("Compressed memories for AI consumption")
+                    except Exception as compress_error:
+                        debug_print(f"Memory compression failed (non-fatal): {compress_error}")
         except Exception as e:
             # Don't let memory system errors break journal updates
             debug_print(f"Memory processing error (non-fatal): {e}")

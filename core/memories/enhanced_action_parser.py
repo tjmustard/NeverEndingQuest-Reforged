@@ -111,7 +111,8 @@ class EnhancedActionParser:
         self.positive_patterns = self._compile_positive_patterns()
         self.negative_patterns = self._compile_negative_patterns()
         self.climactic_patterns = self._compile_climactic_patterns()
-        self.companion_npcs = ['Kira', 'Elen', 'Thane', 'Vera', 'Brann']
+        # NPCs should be provided dynamically from party tracker
+        self.companion_npcs = []
 
     def _compile_positive_patterns(self) -> Dict[str, Dict]:
         """Compile positive action patterns with metadata"""
@@ -447,13 +448,16 @@ class EnhancedActionParser:
             if enemy in context_lower:
                 return 'external'
 
-        # Check for player name (Eirik)
-        if 'eirik' in context_lower:
-            # Check if action is directed at NPC
-            if f"eirik {npc_lower}" in context_lower or f"to {npc_lower}" in context_lower:
+        # Check for player indicators (generic, not hardcoded to specific name)
+        # The player's actual name should be passed in if needed
+        player_indicators = ['you ', 'your ', 'the party', 'we ', 'our ']
+        for indicator in player_indicators:
+            if indicator in context_lower:
+                # Likely player action toward NPC
                 return 'player'
-            elif f"{npc_lower} eirik" in context_lower:
-                return 'external'
+
+        # If neither enemy nor clear player action, it's mutual
+        # Note: Specific player name can be added to player_indicators if known
 
         # Default to mutual if unclear
         return 'mutual'

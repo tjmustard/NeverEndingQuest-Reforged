@@ -326,7 +326,8 @@ class ActionParser:
     def __init__(self):
         self.positive_patterns = ACTION_PATTERNS
         self.negative_patterns = NEGATIVE_PATTERNS
-        self.companion_npcs = ['Kira', 'Elen', 'Thane', 'Vera', 'Brann']
+        # NPCs should be provided dynamically from party tracker
+        self.companion_npcs = []
     
     def parse_entry(self, text: str, npc_name: str) -> List[ParsedAction]:
         """Extract actions related to a specific NPC from journal text"""
@@ -389,15 +390,22 @@ class ActionParser:
         
         return found_actions
     
-    def extract_all_npcs(self, text: str) -> Dict[str, List[ParsedAction]]:
-        """Extract actions for all companion NPCs from text"""
+    def extract_all_npcs(self, text: str, npc_names: List[str] = None) -> Dict[str, List[ParsedAction]]:
+        """Extract actions for all companion NPCs from text
+
+        Args:
+            text: The text to parse
+            npc_names: List of NPC names to check (uses self.companion_npcs if not provided)
+        """
         results = {}
-        
-        for npc_name in self.companion_npcs:
+
+        npcs_to_check = npc_names if npc_names else self.companion_npcs
+
+        for npc_name in npcs_to_check:
             actions = self.parse_entry(text, npc_name)
             if actions:
                 results[npc_name] = actions
-        
+
         return results
     
     def get_emotional_summary(self, actions: List[ParsedAction]) -> Dict[str, float]:

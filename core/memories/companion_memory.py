@@ -123,9 +123,10 @@ class CompanionMemoryManager:
         if not summary:
             return {}
 
-        # Get list of NPCs to track
+        # Get list of NPCs to track (must be provided from party tracker)
         if not party_npcs:
-            party_npcs = ['Kira', 'Elen', 'Thane', 'Vera', 'Brann']
+            debug("CompanionMemory", "No party NPCs provided, skipping memory processing")
+            return {}
 
         memories_created = {}
 

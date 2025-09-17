@@ -356,7 +356,28 @@ def update_conversation_history(conversation_history, party_tracker_data, plot_d
 
     # Create a new list starting with the primary system prompt
     new_history = [primary_system_prompt] if primary_system_prompt else []
-    
+
+    # Inject compressed companion memories immediately after system prompt (per AI recommendation)
+    try:
+        compressed_path = os.path.join("data", "companion_memories", "memories_compressed.json")
+        if os.path.exists(compressed_path):
+            with open(compressed_path, 'r', encoding='utf-8') as f:
+                memories = json.load(f)
+
+            # Format memories compactly for AI
+            if memories and 'npcs' in memories:
+                memory_content = "=== COMPANION MEMORIES (Compressed) ===\n"
+                memory_content += json.dumps(memories['npcs'], separators=(',', ':'))
+                memory_content += "\n@GUIDE: Use ES (emotional state) for tone, BM (behavioral model) for consistency"
+                memory_content += "\n==="
+
+                # Insert right after system prompt
+                memory_message = {'role': 'system', 'content': memory_content}
+                new_history.append(memory_message)
+                debug("Injected compressed companion memories after system prompt", category="memory")
+    except Exception as e:
+        debug(f"Failed to inject memories (non-fatal): {e}", category="memory")
+
     debug(f"VALIDATION: Current module from party tracker: '{current_module}'", category="module_management")
     
     # Module transition detection and marker insertion now happens in action_handler.py
