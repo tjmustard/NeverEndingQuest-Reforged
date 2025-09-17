@@ -2187,6 +2187,13 @@ def main_game_loop():
         with open("debug/logs/prompt_validation.json", "w") as f:
             f.write("[]")  # Initialize with empty array
 
+    # Initialize companion memories from journal if needed
+    try:
+        from core.memories.initialize_memories import check_and_initialize_on_startup
+        check_and_initialize_on_startup()
+    except Exception as e:
+        debug(f"Could not initialize memories (non-fatal): {e}", category="startup")
+
     # Check if first-time setup is needed
     try:
         from utils.startup_wizard import startup_required, run_startup_sequence
