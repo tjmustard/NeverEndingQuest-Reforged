@@ -76,7 +76,21 @@ def compress_memory(memory: Dict) -> Dict:
     # Compress action names
     for action in memory['trigger_actions']:
         action_lower = action.lower()
-        compressed_action = ACTION_MAP.get(action_lower, action[:2])  # Use first 2 chars if not mapped
+
+        # Try exact match first
+        if action_lower in ACTION_MAP:
+            compressed_action = ACTION_MAP[action_lower]
+        # Try partial matches for common patterns
+        elif "kiss" in action_lower:
+            compressed_action = "sk"  # shared kiss
+        elif "dance" in action_lower:
+            compressed_action = "sc"  # shared camaraderie
+        elif "embrace" in action_lower or "hug" in action_lower:
+            compressed_action = "em"  # shared embrace
+        else:
+            # Unknown action - keep full text with marker
+            compressed_action = f"?{action[:10]}"  # Mark unknown with ? prefix
+
         compressed["a"].append(compressed_action)
 
     # Add cascade type only if present
