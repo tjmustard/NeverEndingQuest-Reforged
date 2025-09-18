@@ -129,6 +129,7 @@ from core.managers.status_manager import (
 from utils.file_operations import safe_write_json, safe_read_json
 from utils.module_path_manager import ModulePathManager
 from core.managers.campaign_manager import CampaignManager
+from inventory_context_integration import build_enhanced_dm_note
 
 # Import training data collection
 # from simple_training_collector import log_complete_interaction  # DISABLED
@@ -2917,7 +2918,19 @@ def main_game_loop():
         else:
             dm_note = "Dungeon Master Note: Remember to take actions if necessary such as updating the plot, time, character sheets, and location if changes occur."
 
-        user_input_with_note = f"{dm_note} Player: {user_input_text}"
+        # Enhance player input with inventory context
+        # Using 'general' context for main conversation (combat has separate manager)
+        # Note: We pass None for character_data/characters_data as the integration 
+        # function will extract inventory from party_tracker_data
+        user_input_with_note = build_enhanced_dm_note(
+            dm_note,
+            user_input_text,
+            None,  # character_data not available at this scope
+            party_tracker_data,
+            None,  # characters_data not available at this scope
+            in_combat=False  # Always use general context for main conversation
+        )
+        
         conversation_history.append({"role": "user", "content": user_input_with_note})
         save_conversation_history(conversation_history)
 
