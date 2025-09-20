@@ -22,6 +22,7 @@ from datetime import datetime
 sys.path.append('/mnt/c/dungeon_master_v1')
 from utils.compression.ai_narrative_compressor_agentic import compress_with_ai
 from utils.compression.location_compressor import compress_location
+from utils.compression.character_sheet_conversation_compressor import CharacterSheetConversationCompressor
 from model_config import COMPRESSION_MAX_WORKERS
 
 class ParallelConversationCompressor:
@@ -243,6 +244,14 @@ class ParallelConversationCompressor:
         
         with open(conversation_file, 'r', encoding='utf-8') as f:
             conversation = json.load(f)
+        
+        # Apply character sheet compression FIRST (before parallel processing)
+        try:
+            char_compressor = CharacterSheetConversationCompressor()
+            conversation = char_compressor.compress_conversation_history(conversation)
+            print("Character sheets compressed successfully")
+        except Exception as e:
+            print(f"Warning: Character sheet compression failed: {e}")
         
         print(f"Processing {len(conversation)} messages...")
         print(f"Using {self.max_workers} parallel workers")
