@@ -1366,7 +1366,7 @@ def generate_module_summary(conversation_history, party_tracker_data, module_nam
                 
                 # Prepare conversation for summarization
                 conversation_text = ""
-                for msg in meaningful_messages[-20:]:  # Last 20 meaningful messages
+                for msg in meaningful_messages:  # All meaningful messages from this module
                     role = "Player" if msg.get("role") == "user" else "DM"
                     content = msg.get("content", "")
                     conversation_text += f"{role}: {content}\n\n"
