@@ -638,7 +638,15 @@ def create_module_validation_context(party_tracker_data, path_manager):
             # print("="*60)
             # print()
             
-            validation_context += "VALID CHARACTERS (All Module Codexes):\n"
+            # Add party members to the valid characters list
+            validation_context += "VALID CHARACTERS (Party Members and All Module NPCs):\n"
+            
+            # First add party members from party tracker
+            party_members = party_tracker_data.get("partyMembers", [])
+            for member in party_members:
+                validation_context += f"- {member} (party member)\n"
+            
+            # Then add NPCs from codexes
             if valid_npcs:
                 validation_context += "\n".join([f"- {npc}" for npc in valid_npcs])
             else:
@@ -664,7 +672,14 @@ def create_module_validation_context(party_tracker_data, path_manager):
                 except (json.JSONDecodeError, KeyError):
                     continue
             
-            validation_context += "VALID CHARACTERS in module:\n"
+            validation_context += "VALID CHARACTERS (Party Members and Module Characters):\n"
+            
+            # First add party members from party tracker
+            party_members = party_tracker_data.get("partyMembers", [])
+            for member in party_members:
+                validation_context += f"- {member} (party member)\n"
+            
+            # Then add NPCs from character files
             if valid_npcs:
                 validation_context += "\n".join([f"- {npc}" for npc in valid_npcs])
             else:
@@ -716,12 +731,32 @@ CRITICAL: If validation fails due to wrong NPC for location, provide specific co
 def validate_ai_response(primary_response, user_input, validation_prompt_text, conversation_history, party_tracker_data):
     print("DEBUG: NPC validation running...")
     status_validating()
-    # Get the last two messages from the conversation history
-    last_two_messages = conversation_history[-2:]
-
-    # Ensure we have at least two messages
-    while len(last_two_messages) < 2:
-        last_two_messages.insert(0, {"role": "assistant", "content": "Previous context not available."})
+    
+    # The last message should be the user's input with DM note
+    # The second-to-last should be the previous assistant response
+    # We need to ensure we're getting the right context for validation
+    
+    # Get the last user message (should have the DM note)
+    last_user_message = None
+    last_assistant_message = None
+    
+    # Search backwards for the most recent user and assistant messages
+    for i in range(len(conversation_history) - 1, -1, -1):
+        msg = conversation_history[i]
+        if msg["role"] == "user" and last_user_message is None:
+            last_user_message = msg
+        elif msg["role"] == "assistant" and last_assistant_message is None:
+            last_assistant_message = msg
+        
+        # Stop once we have both
+        if last_user_message and last_assistant_message:
+            break
+    
+    # Ensure we have both messages
+    if not last_user_message:
+        last_user_message = {"role": "user", "content": "Previous user input not available."}
+    if not last_assistant_message:
+        last_assistant_message = {"role": "assistant", "content": "Previous assistant response not available."}
 
     # Get location data from party tracker
     current_location_id = party_tracker_data["worldConditions"]["currentLocationId"]
@@ -888,8 +923,8 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
         {"role": "system", "content": user_input_context},
         {"role": "system", "content": module_data_context},
         {"role": "system", "content": character_inventory_context} if character_inventory_context else None,
-        last_two_messages[0],
-        last_two_messages[1],
+        last_assistant_message,  # Previous assistant response
+        last_user_message,       # Most recent user input (with DM note)
         {"role": "assistant", "content": primary_response}
     ]
     
