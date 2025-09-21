@@ -833,15 +833,28 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
     # We need to include recent conversation history, not just the last two messages
     # This helps the validator understand ongoing narratives like ritual completions
     
-    # Get the last several messages for context (excluding system messages)
+    # Get the last several messages for context (excluding system messages and failed validations)
     recent_messages = []
+    skip_next_assistant = False
+    
     for i in range(len(conversation_history) - 1, -1, -1):
         msg = conversation_history[i]
+        content = msg.get("content", "")
+        
+        # If we see an Error Note, mark to skip the previous assistant message (failed attempt)
+        if msg["role"] == "user" and content.startswith("Error Note:"):
+            skip_next_assistant = True
+            continue  # Don't include the Error Note itself
+            
         # Skip system messages and location transitions
         if msg["role"] in ["user", "assistant"]:
-            content = msg.get("content", "")
+            # Skip this assistant message if it's a failed validation attempt
+            if msg["role"] == "assistant" and skip_next_assistant:
+                skip_next_assistant = False
+                continue
+                
             # Skip pure system notes
-            if not content.startswith(("Location transition:", "Module transition:", "Error Note:")):
+            if not content.startswith(("Location transition:", "Module transition:")):
                 recent_messages.insert(0, msg)
                 # Get last 4 messages (2 exchanges) for context
                 if len(recent_messages) >= 4:
