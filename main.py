@@ -2048,6 +2048,7 @@ def get_ai_response(conversation_history, validation_retry_count=0):
     # Track model selection decision for quality control
     print(f"DEBUG: Logging model selection - model={selected_model}, retry={validation_retry_count}")
     try:
+        import json  # Ensure json is available in this scope
         os.makedirs("debug/quality_control", exist_ok=True)
         model_selection_record = {
             "timestamp": datetime.now().isoformat(),
