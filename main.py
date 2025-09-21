@@ -524,6 +524,20 @@ def create_module_validation_context(party_tracker_data, path_manager):
         
         validation_context = f"MODULE VALIDATION DATA:\nCurrent Module: {current_module}\nCurrent Area: {current_area_id}\nCurrent Location: {current_location_id}\n\n"
         
+        # Load NPC compendium names for validation
+        try:
+            npc_compendium_path = "data/bestiary/npc_compendium.json"
+            with open(npc_compendium_path, "r", encoding="utf-8") as file:
+                npc_compendium = json.load(file)
+                compendium_npc_names = []
+                for npc_key, npc_data in npc_compendium.get("npcs", {}).items():
+                    if "name" in npc_data:
+                        compendium_npc_names.append(npc_data["name"])
+                if compendium_npc_names:
+                    validation_context += f"GLOBAL NPC COMPENDIUM ({len(compendium_npc_names)} NPCs): {', '.join(sorted(compendium_npc_names))}\n\n"
+        except (FileNotFoundError, json.JSONDecodeError):
+            pass  # Silent fail, not critical
+        
         # Get all valid locations in current area and location-specific NPCs
         area_file = path_manager.get_area_path(current_area_id)
         current_location_npcs = []
