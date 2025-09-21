@@ -1024,28 +1024,30 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
     try:
         from build_npc_context import build_npc_validation_context
         
-        # Get party NPCs from party tracker
-        party_npc_names = [npc.get('name') for npc in party_tracker.get('partyNPCs', [])]
+        # Get party NPCs from party tracker data
+        party_npc_names = [npc.get('name') for npc in party_tracker_data.get('partyNPCs', [])]
         
         # Build compressed NPC context
         npc_validation_context = build_npc_validation_context(
-            current_module=party_tracker.get('module', 'Unknown'),
-            current_location=party_tracker.get('worldConditions', {}).get('currentLocationId', 'Unknown'),
+            current_module=party_tracker_data.get('module', 'Unknown'),
+            current_location=party_tracker_data.get('worldConditions', {}).get('currentLocationId', 'Unknown'),
             party_npcs=party_npc_names
         )
-        debug("VALIDATION: Built dynamic NPC context for validation", category="ai_validation")
     except Exception as e:
-        warning(f"VALIDATION: Could not build NPC context: {e}", category="ai_validation")
+        print(f"ERROR: Failed to build NPC context: {e}")
+        import traceback
+        traceback.print_exc()
     
     validation_conversation = [
         {"role": "system", "content": validation_prompt_text},
         {"role": "system", "content": structure_validation_note},
-        {"role": "system", "content": npc_validation_context} if npc_validation_context else None,
+        {"role": "system", "content": npc_validation_context},  # Always include, even if empty
         {"role": "system", "content": location_details},
         {"role": "system", "content": user_input_context},
         {"role": "system", "content": module_data_context},
         {"role": "system", "content": character_inventory_context} if character_inventory_context else None,
     ]
+    
     
     # Add recent conversation context
     validation_conversation.extend(recent_messages)
