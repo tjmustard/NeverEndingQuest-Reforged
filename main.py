@@ -1072,7 +1072,7 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
     for attempt in range(max_validation_retries):
         validation_result = client.chat.completions.create(
             model=DM_VALIDATION_MODEL, # Use imported model name
-            temperature=TEMPERATURE,
+            temperature=0.1,  # Low temperature for consistent validation
             messages=validation_messages_to_send
         )
         
