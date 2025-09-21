@@ -728,9 +728,92 @@ CRITICAL: If validation fails due to wrong NPC for location, provide specific co
         # print(f"DEBUG: Traceback: {traceback.format_exc()}")
         return f"MODULE VALIDATION DATA: Error loading module data - {str(e)}"
 
+def validate_json_structure(response_text):
+    """
+    Pre-validate JSON structure before sending to AI validator.
+    Returns tuple: (is_valid, fixed_response, error_message)
+    """
+    try:
+        # Parse the JSON
+        parsed = json.loads(response_text)
+        
+        # Check top-level structure
+        if not isinstance(parsed, dict):
+            return False, None, "Response is not a JSON object"
+        
+        if "narration" not in parsed:
+            return False, None, "Missing 'narration' field"
+        
+        if "actions" not in parsed:
+            # Add empty actions array if missing
+            parsed["actions"] = []
+            fixed = json.dumps(parsed, ensure_ascii=True)
+            return True, fixed, "Added missing actions array"
+        
+        if not isinstance(parsed["actions"], list):
+            return False, None, "'actions' must be an array"
+        
+        # Check each action's structure
+        fixed_actions = []
+        structure_issues = []
+        
+        for i, action in enumerate(parsed["actions"]):
+            if not isinstance(action, dict):
+                structure_issues.append(f"Action {i+1} is not an object")
+                continue
+                
+            # Check if action has correct structure
+            if "action" in action and "parameters" in action:
+                # Correct structure
+                fixed_actions.append(action)
+            elif len(action) == 1:
+                # Likely wrong format like {"updatePlot": {...}}
+                action_name = list(action.keys())[0]
+                action_params = action[action_name]
+                
+                # Auto-fix to correct structure
+                fixed_action = {
+                    "action": action_name,
+                    "parameters": action_params if isinstance(action_params, dict) else {}
+                }
+                fixed_actions.append(fixed_action)
+                structure_issues.append(f"Auto-fixed action {i+1}: {action_name}")
+            else:
+                structure_issues.append(f"Action {i+1} has invalid structure")
+        
+        # If we fixed any actions, return the fixed version
+        if structure_issues and len(fixed_actions) == len(parsed["actions"]):
+            parsed["actions"] = fixed_actions
+            fixed_json = json.dumps(parsed, ensure_ascii=True, indent=2)
+            return True, fixed_json, f"Auto-fixed structure issues: {'; '.join(structure_issues)}"
+        elif structure_issues:
+            return False, None, f"Structure errors: {'; '.join(structure_issues)}"
+        
+        # All good
+        return True, response_text, "Structure valid"
+        
+    except json.JSONDecodeError as e:
+        return False, None, f"Invalid JSON: {str(e)}"
+    except Exception as e:
+        return False, None, f"Validation error: {str(e)}"
+
 def validate_ai_response(primary_response, user_input, validation_prompt_text, conversation_history, party_tracker_data):
     print("DEBUG: NPC validation running...")
     status_validating()
+    
+    # Pre-validate JSON structure
+    is_valid_structure, fixed_response, structure_message = validate_json_structure(primary_response)
+    
+    if not is_valid_structure:
+        # Structure is too broken to fix automatically
+        print(f"ERROR: JSON structure invalid - {structure_message}")
+        return f"JSON structure error: {structure_message}. Response must be valid JSON with 'narration' and 'actions' fields."
+    
+    # Use fixed response if structure was auto-corrected
+    response_to_validate = fixed_response if fixed_response != primary_response else primary_response
+    
+    if fixed_response != primary_response:
+        print(f"INFO: Auto-fixed JSON structure - {structure_message}")
     
     # The validation needs sufficient context to understand what happened
     # We need to include recent conversation history, not just the last two messages
@@ -913,8 +996,16 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
     except Exception as e:
         debug(f"VALIDATION: Error extracting character names: {e}", category="ai_validation")
     
+    # Add structure validation status to context
+    structure_validation_note = ""
+    if fixed_response != primary_response:
+        structure_validation_note = f"JSON STRUCTURE PRE-VALIDATED: {structure_message}. Structure has been auto-corrected. Focus on validating CONTENT only (NPCs, locations, game rules)."
+    else:
+        structure_validation_note = "JSON STRUCTURE PRE-VALIDATED: Structure is correct. Focus on validating CONTENT only (NPCs, locations, game rules)."
+    
     validation_conversation = [
         {"role": "system", "content": validation_prompt_text},
+        {"role": "system", "content": structure_validation_note},
         {"role": "system", "content": location_details},
         {"role": "system", "content": user_input_context},
         {"role": "system", "content": module_data_context},
@@ -924,8 +1015,8 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
     # Add recent conversation context
     validation_conversation.extend(recent_messages)
     
-    # Add the response being validated
-    validation_conversation.append({"role": "assistant", "content": primary_response})
+    # Add the response being validated (use fixed version if structure was corrected)
+    validation_conversation.append({"role": "assistant", "content": response_to_validate})
     
     # Filter out None entries
     validation_conversation = [msg for msg in validation_conversation if msg is not None]
@@ -1006,7 +1097,9 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
                 os.makedirs("debug/quality_control", exist_ok=True)
                 validation_pair = {
                     "timestamp": datetime.now().isoformat(),
-                    "input_to_validate": ai_response if attempt == 0 else validation_messages_to_send[-1]["content"],
+                    "input_to_validate": response_to_validate if attempt == 0 else validation_messages_to_send[-1]["content"],
+                    "structure_fixed": fixed_response != primary_response,
+                    "structure_message": structure_message,
                     "validation_result": {
                         "valid": is_valid,
                         "reason": reason,
