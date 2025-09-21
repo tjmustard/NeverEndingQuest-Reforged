@@ -534,9 +534,10 @@ def create_module_validation_context(party_tracker_data, path_manager):
                     if "name" in npc_data:
                         compendium_npc_names.append(npc_data["name"])
                 if compendium_npc_names:
+                    print(f"DEBUG: Loaded {len(compendium_npc_names)} NPCs from compendium for validation")
                     validation_context += f"GLOBAL NPC COMPENDIUM ({len(compendium_npc_names)} NPCs): {', '.join(sorted(compendium_npc_names))}\n\n"
-        except (FileNotFoundError, json.JSONDecodeError):
-            pass  # Silent fail, not critical
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            print(f"WARNING: Could not load NPC compendium: {e}")
         
         # Get all valid locations in current area and location-specific NPCs
         area_file = path_manager.get_area_path(current_area_id)
