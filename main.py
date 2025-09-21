@@ -524,20 +524,8 @@ def create_module_validation_context(party_tracker_data, path_manager):
         
         validation_context = f"MODULE VALIDATION DATA:\nCurrent Module: {current_module}\nCurrent Area: {current_area_id}\nCurrent Location: {current_location_id}\n\n"
         
-        # Load NPC compendium names for validation
-        try:
-            npc_compendium_path = "data/bestiary/npc_compendium.json"
-            with open(npc_compendium_path, "r", encoding="utf-8") as file:
-                npc_compendium = json.load(file)
-                compendium_npc_names = []
-                for npc_key, npc_data in npc_compendium.get("npcs", {}).items():
-                    if "name" in npc_data:
-                        compendium_npc_names.append(npc_data["name"])
-                if compendium_npc_names:
-                    print(f"DEBUG: Loaded {len(compendium_npc_names)} NPCs from compendium for validation")
-                    validation_context += f"GLOBAL NPC COMPENDIUM ({len(compendium_npc_names)} NPCs): {', '.join(sorted(compendium_npc_names))}\n\n"
-        except (FileNotFoundError, json.JSONDecodeError) as e:
-            print(f"WARNING: Could not load NPC compendium: {e}")
+        # NPC context now dynamically built in validate_dm_response function
+        # No longer loading static NPC compendium here
         
         # Get all valid locations in current area and location-specific NPCs
         area_file = path_manager.get_area_path(current_area_id)
@@ -1031,9 +1019,28 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
     else:
         structure_validation_note = "JSON STRUCTURE PRE-VALIDATED: Structure is correct. Focus on validating CONTENT only (NPCs, locations, game rules)."
     
+    # Build dynamic NPC context
+    npc_validation_context = ""
+    try:
+        from build_npc_context import build_npc_validation_context
+        
+        # Get party NPCs from party tracker
+        party_npc_names = [npc.get('name') for npc in party_tracker.get('partyNPCs', [])]
+        
+        # Build compressed NPC context
+        npc_validation_context = build_npc_validation_context(
+            current_module=party_tracker.get('module', 'Unknown'),
+            current_location=party_tracker.get('worldConditions', {}).get('currentLocationId', 'Unknown'),
+            party_npcs=party_npc_names
+        )
+        debug("VALIDATION: Built dynamic NPC context for validation", category="ai_validation")
+    except Exception as e:
+        warning(f"VALIDATION: Could not build NPC context: {e}", category="ai_validation")
+    
     validation_conversation = [
         {"role": "system", "content": validation_prompt_text},
         {"role": "system", "content": structure_validation_note},
+        {"role": "system", "content": npc_validation_context} if npc_validation_context else None,
         {"role": "system", "content": location_details},
         {"role": "system", "content": user_input_context},
         {"role": "system", "content": module_data_context},
