@@ -1000,6 +1000,29 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
             validation_json = parse_json_safely(validation_response)
             is_valid = validation_json.get("valid", False)
             reason = validation_json.get("reason", "No reason provided")
+            
+            # Track validation pairs for quality control
+            try:
+                os.makedirs("debug/quality_control", exist_ok=True)
+                validation_pair = {
+                    "timestamp": datetime.now().isoformat(),
+                    "input_to_validate": ai_response if attempt == 0 else validation_messages_to_send[-1]["content"],
+                    "validation_result": {
+                        "valid": is_valid,
+                        "reason": reason,
+                        "raw_response": validation_response
+                    },
+                    "attempt": attempt + 1,
+                    "model_used": DM_VALIDATION_MODEL
+                }
+                
+                # Append to validation pairs log
+                validation_log_path = "debug/quality_control/validation_pairs.jsonl"
+                with open(validation_log_path, "a", encoding="utf-8") as f:
+                    json.dump(validation_pair, f, ensure_ascii=False)
+                    f.write("\n")
+            except Exception as e:
+                debug(f"Failed to log validation pair: {e}", category="ai_validation")
 
             # Log only failed validations to prompt_validation.json
             if not is_valid:
@@ -1923,6 +1946,28 @@ def get_ai_response(conversation_history, validation_retry_count=0):
         else:
             print(f"DEBUG: MODEL ROUTING - Intelligent routing disabled, using FULL MODEL")
     
+    # Track model selection decision for quality control
+    try:
+        os.makedirs("debug/quality_control", exist_ok=True)
+        model_selection_record = {
+            "timestamp": datetime.now().isoformat(),
+            "user_input": user_input[:200],  # First 200 chars
+            "prediction": prediction if validation_retry_count == 0 and not has_module_creation_prompt else None,
+            "selected_model": selected_model,
+            "routing_reason": prediction.get("reason", "Validation retry or module creation") if validation_retry_count == 0 else f"Validation retry {validation_retry_count}",
+            "validation_retry_count": validation_retry_count,
+            "has_module_creation_prompt": has_module_creation_prompt,
+            "intelligent_routing_enabled": ENABLE_INTELLIGENT_ROUTING
+        }
+        
+        # Append to model selection log
+        model_log_path = "debug/quality_control/model_selection.jsonl"
+        with open(model_log_path, "a", encoding="utf-8") as f:
+            json.dump(model_selection_record, f, ensure_ascii=False)
+            f.write("\n")
+    except Exception as e:
+        debug(f"Failed to log model selection: {e}", category="ai_routing")
+    
     # Check if compression is enabled and apply if needed
     try:
         from model_config import COMPRESSION_ENABLED
@@ -2009,6 +2054,27 @@ def get_ai_response(conversation_history, validation_retry_count=0):
         actual_actions = extract_actual_actions(content)
         # Log prediction accuracy
         log_prediction_accuracy(user_input, prediction, actual_actions)
+        
+        # Track model selection result for quality control
+        try:
+            # Update the model selection record with actual outcome
+            model_result_record = {
+                "timestamp": datetime.now().isoformat(),
+                "user_input": user_input[:200],
+                "selected_model": selected_model,
+                "prediction": prediction,
+                "actual_actions": actual_actions,
+                "prediction_correct": bool(actual_actions) == prediction["requires_actions"],
+                "response_length": len(content)
+            }
+            
+            # Append to model results log
+            results_log_path = "debug/quality_control/model_results.jsonl"
+            with open(results_log_path, "a", encoding="utf-8") as f:
+                json.dump(model_result_record, f, ensure_ascii=False)
+                f.write("\n")
+        except Exception as e:
+            debug(f"Failed to log model result: {e}", category="ai_routing")
     
     # The sanitization line that was here has been removed.
     # We now pass the raw, untouched JSON string to the next function.
