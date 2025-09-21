@@ -807,7 +807,7 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
     if not is_valid_structure:
         # Structure is too broken to fix automatically
         print(f"ERROR: JSON structure invalid - {structure_message}")
-        return f"JSON structure error: {structure_message}. Response must be valid JSON with 'narration' and 'actions' fields."
+        return (False, f"JSON structure error: {structure_message}. Response must be valid JSON with 'narration' and 'actions' fields.")
     
     # Use fixed response if structure was auto-corrected
     response_to_validate = fixed_response if fixed_response != primary_response else primary_response
@@ -1097,9 +1097,13 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
                 os.makedirs("debug/quality_control", exist_ok=True)
                 validation_pair = {
                     "timestamp": datetime.now().isoformat(),
-                    "input_to_validate": response_to_validate if attempt == 0 else validation_messages_to_send[-1]["content"],
-                    "structure_fixed": fixed_response != primary_response,
-                    "structure_message": structure_message,
+                    "user_input": user_input,  # What the user originally said
+                    "assistant_response": response_to_validate if attempt == 0 else validation_messages_to_send[-1]["content"],
+                    "structure_validation": {
+                        "needed_fix": fixed_response != primary_response,
+                        "message": structure_message,
+                        "original_response": primary_response if fixed_response != primary_response else None
+                    },
                     "validation_result": {
                         "valid": is_valid,
                         "reason": reason,
@@ -1132,10 +1136,11 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
                     json.dump(log_entry, log_file)
                     log_file.write("\n")  # Add a newline for better readability
 
-                return reason  # Return the failure reason
+                return (False, reason)  # Return tuple with failure status and reason
             else:
                 debug("SUCCESS: Validation passed successfully", category="ai_validation")
-                return True  # Return True for successful validation
+                # Return the fixed/validated response content
+                return (True, response_to_validate)  # Return tuple with validation status and content
 
         except json.JSONDecodeError:
             debug(f"VALIDATION: Invalid JSON from validation model (Attempt {attempt + 1}/{max_validation_retries})", category="ai_validation")
@@ -1144,7 +1149,8 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
 
     # If we've exhausted all retries and still don't have a valid JSON response
     warning("VALIDATION: Validation model consistently produced invalid JSON. Assuming primary response is valid.", category="ai_validation")
-    return True
+    # Return the (potentially fixed) response
+    return (True, response_to_validate)
 
 def load_validation_prompt():
     from model_config import COMPRESSION_ENABLED
@@ -2040,6 +2046,7 @@ def get_ai_response(conversation_history, validation_retry_count=0):
             print(f"DEBUG: MODEL ROUTING - Intelligent routing disabled, using FULL MODEL")
     
     # Track model selection decision for quality control
+    print(f"DEBUG: Logging model selection - model={selected_model}, retry={validation_retry_count}")
     try:
         os.makedirs("debug/quality_control", exist_ok=True)
         model_selection_record = {
@@ -2059,6 +2066,7 @@ def get_ai_response(conversation_history, validation_retry_count=0):
             json.dump(model_selection_record, f, ensure_ascii=False)
             f.write("\n")
     except Exception as e:
+        print(f"ERROR: Failed to log model selection: {e}")
         debug(f"Failed to log model selection: {e}", category="ai_routing")
     
     # Check if compression is enabled and apply if needed
@@ -3136,7 +3144,22 @@ def main_game_loop():
             ai_response_content = get_ai_response(conversation_history, validation_retry_count=retry_count)
             validation_result = validate_ai_response(ai_response_content, user_input_text, validation_prompt_text, conversation_history, party_tracker_data)
         
-            if validation_result is True:
+            # Unpack the validation result tuple
+            is_valid = False
+            validation_reason = ""
+            if isinstance(validation_result, tuple):
+                is_valid, validated_content = validation_result
+                if is_valid:
+                    # Use the fixed/validated content if auto-fix was applied
+                    ai_response_content = validated_content
+                else:
+                    validation_reason = validated_content  # It's the error message when invalid
+            else:
+                # Handle old-style return (shouldn't happen after our change)
+                is_valid = validation_result is True
+                validation_reason = validation_result if isinstance(validation_result, str) else ""
+            
+            if is_valid:
                 valid_response_received = True
                 debug(f"SUCCESS: Valid response generated on attempt {retry_count + 1}", category="ai_validation")
             
@@ -3218,18 +3241,18 @@ def main_game_loop():
                 conversation_history = load_json_file(json_file) or []
                 # No need to save here, as process_ai_response already handled all persistence.
 
-            elif isinstance(validation_result, str):
-                # (The rest of your validation retry logic remains the same)
-                debug(f"VALIDATION: Validation failed. Reason: {validation_result}", category="ai_validation")
+            elif not is_valid and validation_reason:
+                # Validation failed with a reason
+                debug(f"VALIDATION: Validation failed. Reason: {validation_reason}", category="ai_validation")
                 status_retrying(retry_count + 1, 5)
                 # CRITICAL: Save the failed assistant response so the AI can see what it did wrong
                 if ai_response_content:
                     conversation_history.append({"role": "assistant", "content": ai_response_content})
-                conversation_history.append({"role": "user", "content": f"Error Note: Your previous response failed validation. Reason: {validation_result}. Please adjust your response accordingly."})
+                conversation_history.append({"role": "user", "content": f"Error Note: Your previous response failed validation. Reason: {validation_reason}. Please adjust your response accordingly."})
                 save_conversation_history(conversation_history)
                 retry_count += 1
             else: 
-                warning(f"VALIDATION: Unexpected validation result: {validation_result}. Assuming invalid and retrying.", category="ai_validation")
+                warning(f"VALIDATION: Unexpected validation result: is_valid={is_valid}, reason={validation_reason}. Retrying.", category="ai_validation")
                 retry_count += 1
     
         if not valid_response_received:
