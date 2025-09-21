@@ -732,31 +732,27 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
     print("DEBUG: NPC validation running...")
     status_validating()
     
-    # The last message should be the user's input with DM note
-    # The second-to-last should be the previous assistant response
-    # We need to ensure we're getting the right context for validation
+    # The validation needs sufficient context to understand what happened
+    # We need to include recent conversation history, not just the last two messages
+    # This helps the validator understand ongoing narratives like ritual completions
     
-    # Get the last user message (should have the DM note)
-    last_user_message = None
-    last_assistant_message = None
-    
-    # Search backwards for the most recent user and assistant messages
+    # Get the last several messages for context (excluding system messages)
+    recent_messages = []
     for i in range(len(conversation_history) - 1, -1, -1):
         msg = conversation_history[i]
-        if msg["role"] == "user" and last_user_message is None:
-            last_user_message = msg
-        elif msg["role"] == "assistant" and last_assistant_message is None:
-            last_assistant_message = msg
-        
-        # Stop once we have both
-        if last_user_message and last_assistant_message:
-            break
+        # Skip system messages and location transitions
+        if msg["role"] in ["user", "assistant"]:
+            content = msg.get("content", "")
+            # Skip pure system notes
+            if not content.startswith(("Location transition:", "Module transition:", "Error Note:")):
+                recent_messages.insert(0, msg)
+                # Get last 4 messages (2 exchanges) for context
+                if len(recent_messages) >= 4:
+                    break
     
-    # Ensure we have both messages
-    if not last_user_message:
-        last_user_message = {"role": "user", "content": "Previous user input not available."}
-    if not last_assistant_message:
-        last_assistant_message = {"role": "assistant", "content": "Previous assistant response not available."}
+    # Ensure we have at least some context
+    while len(recent_messages) < 4:
+        recent_messages.insert(0, {"role": "assistant", "content": "Previous context not available."})
 
     # Get location data from party tracker
     current_location_id = party_tracker_data["worldConditions"]["currentLocationId"]
@@ -923,10 +919,13 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
         {"role": "system", "content": user_input_context},
         {"role": "system", "content": module_data_context},
         {"role": "system", "content": character_inventory_context} if character_inventory_context else None,
-        last_assistant_message,  # Previous assistant response
-        last_user_message,       # Most recent user input (with DM note)
-        {"role": "assistant", "content": primary_response}
     ]
+    
+    # Add recent conversation context
+    validation_conversation.extend(recent_messages)
+    
+    # Add the response being validated
+    validation_conversation.append({"role": "assistant", "content": primary_response})
     
     # Filter out None entries
     validation_conversation = [msg for msg in validation_conversation if msg is not None]

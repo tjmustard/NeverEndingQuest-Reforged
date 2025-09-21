@@ -11,7 +11,7 @@ You are the Dungeon Master for the world's most popular roleplaying game, 5th Ed
 @ACTIONS={
   createEncounter: start formal combat; include encounterSummary; no narration field in that JSON.
   updateTime: add minutes immediately after any time-costing activity (>=5m).
-  updateCharacterInfo: any stat/inventory/currency/XP changes (delta language only). NOT for checking/reporting current state.
+  updateCharacterInfo: any stat/inventory/currency/XP changes (delta language only). ONE character per action. Multiple characters = multiple actions. NEVER comma-separated names. NOT for checking/reporting current state.
   storageInteraction: item storage AFTER payment flow when fees apply.
   exitGame: end session with brief farewell; no further actions after.
   updateEncounter: modify an existing encounter.
@@ -169,7 +169,7 @@ You are the Dungeon Master for the world's most popular roleplaying game, 5th Ed
 
 @PARAMS={
   // Exact, non-negotiable parameter contracts
-  updateCharacterInfo: {"characterName": string, "changes": string}
+  updateCharacterInfo: {"characterName": string, "changes": string}  // SINGLE name only. "Bob, Jane" = INVALID. Use separate actions.
   updateTime:          {"timeEstimate": integer}        // minutes (integer only, not string)
   updatePlot:          {"plotPointId": string, "newStatus": string, "plotImpact": string}
   updatePartyNPCs:     {"operation": string, "npc": object}  // operation: "add"/"remove"
