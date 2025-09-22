@@ -107,6 +107,7 @@ from updates.update_world_time import update_world_time
 from core.ai.conversation_utils import update_conversation_history, update_character_data
 from updates.update_character_info import update_character_info
 from core.managers.level_up_manager import LevelUpSession # Add this line
+from core.ai.incremental_compression import IncrementalLocationCompressor
 
 # Import new manager modules
 from core.managers import location_manager
@@ -2034,6 +2035,22 @@ def process_ai_response(response, party_tracker_data, location_data, conversatio
 
 def save_conversation_history(history):
     try:
+        # Check if we should compress before saving
+        compressor = IncrementalLocationCompressor()
+        
+        # Check compression conditions (15+ valid pairs at current location)
+        if compressor.should_compress(history):
+            debug("Compression conditions met - applying incremental compression", category="compression")
+            
+            # Apply compression (returns new list if successful)
+            compressed_history = compressor.apply_compression_to_list(history)
+            if compressed_history:
+                history = compressed_history
+                info("Conversation history compressed successfully", category="compression")
+            else:
+                debug("Compression not applied - conditions not fully met", category="compression")
+        
+        # Save the (possibly compressed) history
         safe_json_dump(history, json_file)
     except Exception as e:
         error(f"FAILURE: Failed to save conversation history", exception=e, category="file_operations")
