@@ -629,7 +629,7 @@ def update_journal_with_summary(adventure_summary, party_tracker_data, location_
                     try:
                         import subprocess
                         result = subprocess.run(
-                            ["python", "compress_memories.py"],
+                            ["python", "scripts/memory_management/compress_memories.py"],
                             capture_output=True,
                             text=True,
                             timeout=5

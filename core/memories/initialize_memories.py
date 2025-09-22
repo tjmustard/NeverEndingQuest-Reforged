@@ -98,7 +98,7 @@ def initialize_memories_if_needed():
         try:
             import subprocess
             result = subprocess.run(
-                ["python", "compress_memories.py"],
+                ["python", "scripts/memory_management/compress_memories.py"],
                 capture_output=True,
                 text=True,
                 timeout=5
