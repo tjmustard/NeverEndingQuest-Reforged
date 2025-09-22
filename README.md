@@ -252,6 +252,9 @@ Module Conversation Management:
 
 #### 3. **Living World Persistence with Smart Summary Management**
 - **NPC Memory**: Characters remember your entire relationship history through living summaries
+- **Dynamic NPC Context**: Real-time NPC discovery system provides complete context for AI interactions
+- **Validation-Aware NPCs**: Automatic NPC tracking prevents hallucination and ensures consistency
+- **Incremental Conversation Compression**: Intelligent compression preserves recent context while reducing token usage
 - **Decision Consequences**: Past choices affect future module availability
 - **World State Tracking**: Completed quests permanently change the world
 - **Cross-Module Continuity**: Items, relationships, and reputation carry forward
@@ -505,6 +508,8 @@ The codebase follows a clean Manager Pattern for all major subsystems:
 - **LevelUpManager** - Processes character progression in isolation
 - **StatusManager** - Provides real-time feedback across interfaces
 - **ModulePathManager** - Abstracts file system for module data
+- **IncrementalLocationCompressor** - Automatically compresses conversation history at current location
+- **CompanionMemoryManager** - Tracks NPC relationships and interactions
 
 ### Module-Centric Architecture
 ```
@@ -1014,6 +1019,13 @@ First iteration of conversation compression technology:
 - **Combat message compression**: ~70-85% compression rate  
 - **Validation prompt compression**: ~60-75% compression rate
 - **Goal**: Enable local LLM usage in future iterations
+
+#### Dynamic NPC Core Memory System
+- **Real-time NPC Discovery**: Automatically scans all module files to build complete NPC context
+- **Dynamic Context Building**: Creates comprehensive NPC presence data for AI validation
+- **Location-Aware Tracking**: Knows exactly which NPCs are at each location
+- **Validation Integration**: Prevents AI from hallucinating NPCs that don't exist
+- **Cross-Module Consistency**: Maintains NPC continuity across different adventures
 
 #### Bug Fixes
 - Fixed debug log file growing to 3GB+ due to exponential growth bug
