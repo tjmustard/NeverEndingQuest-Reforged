@@ -130,7 +130,7 @@ from core.managers.status_manager import (
 from utils.file_operations import safe_write_json, safe_read_json
 from utils.module_path_manager import ModulePathManager
 from core.managers.campaign_manager import CampaignManager
-from inventory_context_integration import build_enhanced_dm_note
+from core.ai.inventory_context_integration import build_enhanced_dm_note
 
 # Import training data collection
 # from simple_training_collector import log_complete_interaction  # DISABLED
@@ -1023,7 +1023,7 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
     # Build dynamic NPC context
     npc_validation_context = ""
     try:
-        from build_npc_context import build_npc_validation_context
+        from core.ai.build_npc_context import build_npc_validation_context
         
         # Get party NPCs from party tracker data
         party_npc_names = [npc.get('name') for npc in party_tracker_data.get('partyNPCs', [])]

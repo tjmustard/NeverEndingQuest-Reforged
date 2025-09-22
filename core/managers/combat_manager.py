@@ -154,7 +154,7 @@ from utils.enhanced_logger import debug, info, warning, error, game_event, set_s
 # Import combat message compressor for optimizing conversation history
 from core.ai.combat_compressor import CombatUserMessageCompressor
 # Import inventory context matcher for enhancing player combat actions
-from inventory_context_integration import enhance_player_input_with_inventory
+from core.ai.inventory_context_integration import enhance_player_input_with_inventory
 
 # Set script name for logging
 set_script_name(__name__)

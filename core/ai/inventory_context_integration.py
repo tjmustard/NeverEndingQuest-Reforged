@@ -4,7 +4,7 @@ Integration module for inventory context matcher
 Provides functions to enhance player inputs with inventory context before adding to conversation history
 """
 
-from inventory_context_matcher_v2 import InventoryContextMatcherV2
+from core.ai.inventory_context_matcher_v2 import InventoryContextMatcherV2
 from utils.enhanced_logger import debug, warning
 
 # Global matcher instance to avoid re-initialization
