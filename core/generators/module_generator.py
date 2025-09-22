@@ -504,14 +504,23 @@ If the field expects an array, return just the array.
 If the field expects an object, return just the object.
 """
         
-        response = client.chat.completions.create(
-            model=DM_MAIN_MODEL,
-            temperature=0.7,
-            messages=[
-                {"role": "system", "content": "You are an expert 5e module designer. Return only the requested data in the exact format needed."},
-                {"role": "user", "content": prompt}
-            ]
-        )
+        print(f"DEBUG: [ModuleGenerator] Making API call to {DM_MAIN_MODEL}...")
+        print(f"DEBUG: [ModuleGenerator] Prompt length: {len(prompt)} characters")
+        try:
+            response = client.chat.completions.create(
+                model=DM_MAIN_MODEL,
+                temperature=0.7,
+                messages=[
+                    {"role": "system", "content": "You are an expert 5e module designer. Return only the requested data in the exact format needed."},
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            print(f"DEBUG: [ModuleGenerator] API call completed successfully")
+        except Exception as e:
+            print(f"ERROR: [ModuleGenerator] API call failed: {e}")
+            import traceback
+            print(f"ERROR: [ModuleGenerator] Traceback: {traceback.format_exc()}")
+            raise
         
         content = response.choices[0].message.content.strip()
         
@@ -526,11 +535,14 @@ If the field expects an object, return just the object.
     
     def generate_module(self, initial_concept: str, custom_values: Dict[str, Any] = None, context=None) -> Dict[str, Any]:
         """Generate a complete module from an initial concept"""
+        print(f"DEBUG: [ModuleGenerator] Starting generate_module")
+        print(f"DEBUG: [ModuleGenerator] Initial concept: {initial_concept[:100]}...")
         module_data = custom_values or {}
         
         # Add context validation if provided
         if context:
             module_data["moduleName"] = context.module_name
+            print(f"DEBUG: [ModuleGenerator] Using module name: {context.module_name}")
         
         # Generate fields in order of dependencies
         field_order = [

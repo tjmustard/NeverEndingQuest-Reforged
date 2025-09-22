@@ -162,7 +162,7 @@ class LocationGraph:
                         area_data = safe_read_json(area_file)
                         if area_data:
                             self.area_data[area_id] = area_data
-                            self._process_area_locations(area_id, area_data)
+                            self._process_area_locations(area_id, area_data, area_file)
                             write_debug(f"  [OK] Loaded {area_id}: {area_data.get('areaName', 'Unknown')} [{current_module}]")
                         else:
                             write_debug(f"  [ERROR] Failed to load {area_file}")
@@ -179,7 +179,7 @@ class LocationGraph:
                             area_data = safe_read_json(area_file)
                             if area_data:
                                 self.area_data[area_id] = area_data
-                                self._process_area_locations(area_id, area_data)
+                                self._process_area_locations(area_id, area_data, area_file)
                                 write_debug(f"  [OK] Loaded {area_id}: {area_data.get('areaName', 'Unknown')} [{module_name}]")
                             else:
                                 write_debug(f"  [ERROR] Failed to load {area_file}")
@@ -192,7 +192,7 @@ class LocationGraph:
         write_debug(f"Graph built: {len(self.nodes)} locations, {sum(len(v) for v in self.edges.values())} connections")
         print(f"DEBUG: [LocationGraph.load_module_data] Load complete. Total nodes: {len(self.nodes)}, Total edges: {sum(len(v) for v in self.edges.values())}")
     
-    def _process_area_locations(self, area_id: str, area_data: Dict):
+    def _process_area_locations(self, area_id: str, area_data: Dict, area_file: str = None):
         """Process all locations in an area and add them to the graph"""
         locations = area_data.get('locations', [])
         
@@ -207,7 +207,8 @@ class LocationGraph:
             self.nodes[location_id] = {
                 'area_id': area_id,
                 'location_name': location_name,
-                'data': location
+                'data': location,
+                'area_file': area_file  # Track the source file for auto-fixing
             }
             
             # Build ID <-> name mappings
@@ -228,7 +229,51 @@ class LocationGraph:
             area_connectivity_ids = location_data.get('areaConnectivityId', [])
             
             # Process areaConnectivity (location names)
-            for connected_location_name in area_connectivity:
+            fixed_connectivity = []
+            needs_fixing = False
+            
+            for i, connected_location_name in enumerate(area_connectivity):
+                # Auto-fix dict objects in areaConnectivity
+                if isinstance(connected_location_name, dict):
+                    print(f"WARNING: Dict found in areaConnectivity for location {location_id} in {node_info.get('area_file', 'Unknown')}")
+                    print(f"         Auto-fixing by extracting area name...")
+                    
+                    # Try to extract a useful name from the dict
+                    # Look for 'name', 'areaName', 'description' fields
+                    area_name = None
+                    if 'name' in connected_location_name:
+                        area_name = connected_location_name['name']
+                    elif 'areaName' in connected_location_name:
+                        area_name = connected_location_name['areaName']
+                    elif 'description' in connected_location_name:
+                        # Extract area name from description if possible
+                        desc = connected_location_name['description']
+                        if 'toward the' in desc:
+                            # e.g., "toward the Goblin Warren Depths"
+                            area_name = desc.split('toward the')[1].split(',')[0].strip()
+                        elif 'to the' in desc:
+                            area_name = desc.split('to the')[1].split(',')[0].strip()
+                    
+                    # If we found a name, use it; otherwise try to construct from areaId
+                    if not area_name and 'areaId' in connected_location_name:
+                        # Try to find the area name from the areaId
+                        area_id = connected_location_name['areaId']
+                        for aid, adata in self.area_data.items():
+                            if aid == area_id:
+                                area_name = adata.get('areaName', f"Area {area_id}")
+                                break
+                    
+                    if area_name:
+                        fixed_connectivity.append(area_name)
+                        connected_location_name = area_name
+                        needs_fixing = True
+                        print(f"         Extracted area name: {area_name}")
+                    else:
+                        print(f"         Could not extract area name, skipping entry")
+                        continue
+                else:
+                    fixed_connectivity.append(connected_location_name)
+                
                 if connected_location_name in self.name_to_id:
                     connected_location_id = self.name_to_id[connected_location_name]
                     # Add bidirectional connection using IDs
@@ -236,6 +281,40 @@ class LocationGraph:
                         self.edges[location_id].append(connected_location_id)
                     if location_id not in self.edges[connected_location_id]:
                         self.edges[connected_location_id].append(location_id)
+            
+            # If we fixed any dict objects, update the file
+            if needs_fixing and 'area_file' in node_info:
+                try:
+                    print(f"         Updating file {node_info['area_file']} with fixed areaConnectivity...")
+                    
+                    # Update the location data in memory
+                    location_data['areaConnectivity'] = fixed_connectivity
+                    
+                    # Load the full area file
+                    import json
+                    with open(node_info['area_file'], 'r') as f:
+                        area_json = json.load(f)
+                    
+                    # Find and update the location in the file
+                    for loc in area_json.get('locations', []):
+                        if loc.get('locationId') == location_id:
+                            loc['areaConnectivity'] = fixed_connectivity
+                            break
+                    
+                    # Write back to file
+                    with open(node_info['area_file'], 'w') as f:
+                        json.dump(area_json, f, indent=2)
+                    
+                    # Also update backup file if it exists
+                    backup_file = node_info['area_file'].replace('.json', '_BU.json')
+                    if os.path.exists(backup_file):
+                        with open(backup_file, 'w') as f:
+                            json.dump(area_json, f, indent=2)
+                    
+                    print(f"         File updated successfully!")
+                    
+                except Exception as e:
+                    print(f"         Error updating file: {e}")
             
             # Process areaConnectivityId (now containing direct location IDs)
             for connected_location_id in area_connectivity_ids:

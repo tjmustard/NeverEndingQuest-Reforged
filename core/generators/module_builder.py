@@ -71,6 +71,7 @@ class ModuleBuilder:
         self.plots_data = {}
         self.context = ModuleContext()
         self.progress_callback = None  # For progress reporting
+        self.per_area_locations = None  # For custom locations per area
         
         # Initialize generators
         self.module_gen = ModuleGenerator()
@@ -128,21 +129,41 @@ MODULE INDEPENDENCE RULES:
         self.log("Starting module build process...")
         self.log(f"Initial concept: {initial_concept}")
         
-        # Get existing characters for context
-        existing_characters = self.get_party_members()
-        self.context_header = self.create_context_header(existing_characters)
-        
-        # Create required directory structure first
-        self.create_module_directories()
-        
-        # Initialize context
-        self.context.module_name = self.config.module_name.replace("_", " ")
-        self.context.module_id = self.config.module_name
-        
-        # Step 1: Generate module overview with context
-        self.log("Step 1: Generating module overview...")
-        contextualized_concept = self.context_header + initial_concept
-        self.module_data = self.module_gen.generate_module(contextualized_concept, context=self.context)
+        try:
+            # Report progress if callback available
+            if self.progress_callback:
+                self.progress_callback('initializing', 'Getting party members...')
+            
+            # Get existing characters for context
+            existing_characters = self.get_party_members()
+            self.context_header = self.create_context_header(existing_characters)
+            
+            # Report progress
+            if self.progress_callback:
+                self.progress_callback('base_structure', 'Creating directory structure...')
+            
+            # Create required directory structure first
+            self.create_module_directories()
+            
+            # Initialize context
+            self.context.module_name = self.config.module_name.replace("_", " ")
+            self.context.module_id = self.config.module_name
+            
+            # Step 1: Generate module overview with context
+            self.log("Step 1: Generating module overview...")
+            if self.progress_callback:
+                self.progress_callback('base_structure', 'Generating module overview from AI...')
+            
+            # Add number of areas to the concept so AI generates the right amount
+            contextualized_concept = self.context_header + initial_concept
+            contextualized_concept += f"\n\nIMPORTANT: Generate exactly {self.config.num_areas} regions in the worldMap array."
+            
+            self.module_data = self.module_gen.generate_module(contextualized_concept, context=self.context)
+        except Exception as e:
+            self.log(f"ERROR in build_module: {e}")
+            import traceback
+            self.log(f"Traceback: {traceback.format_exc()}")
+            raise
         
         # Extract NPCs and factions from module data
         self._extract_module_entities()
@@ -278,11 +299,25 @@ MODULE INDEPENDENCE RULES:
         """Generate detailed area files from the module world map"""
         world_map = self.module_data.get("worldMap", [])
         
+        self.log(f"Starting area generation for {self.config.num_areas} areas")
+        self.log(f"Default locations per area: {self.config.locations_per_area}")
+        if self.per_area_locations:
+            self.log(f"Custom per_area_locations provided: {self.per_area_locations}")
+        else:
+            self.log(f"No custom per_area_locations - using defaults")
+        
         for i, region in enumerate(world_map[:self.config.num_areas]):
             area_id = region["mapId"]
             
             # Determine area type based on region description
             area_type = self.determine_area_type(region)
+            
+            # Use custom per-area locations if provided, otherwise use default
+            if self.per_area_locations and i < len(self.per_area_locations):
+                num_locations_for_area = self.per_area_locations[i]
+                self.log(f"Using custom locations for area {i+1}: {num_locations_for_area}")
+            else:
+                num_locations_for_area = self.config.locations_per_area
             
             config = AreaConfig(
                 area_type=area_type,
@@ -290,7 +325,7 @@ MODULE INDEPENDENCE RULES:
                 complexity="moderate",
                 danger_level=region["dangerLevel"],
                 recommended_level=region["recommendedLevel"],
-                num_locations=self.config.locations_per_area
+                num_locations=num_locations_for_area
             )
             
             # Add area to context

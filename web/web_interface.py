@@ -4306,60 +4306,145 @@ def handle_request_module_list():
         emit('module_list_response', [])  # Send an empty list on error
 
 def simulate_build_process(params):
-    """A target function for a thread that simulates module creation."""
+    """A target function for a thread that runs the actual module builder."""
     global cancel_build_flag
     cancel_build_flag.clear()
 
-    stages = [
-        (0, "Initializing", "Starting module creation..."),
-        (1, "Base Structure", "Generating core module files..."),
-        (2, "NPCs", "Creating unique NPCs and factions..."),
-        (3, "Monsters", "Populating bestiary for the module..."),
-        (4, "Areas", "Designing distinct areas and environments..."),
-        (5, "Plots", "Weaving main and side quests..."),
-        (6, "Connections", "Building the location graph..."),
-        (7, "Finalizing", "Compiling all module data..."),
-        (8, "Saving", "Saving module to disk..."),
-    ]
-    total_stages = len(stages)
-
     try:
-        for i, (stage_num, stage_name, message) in enumerate(stages):
+        # Ensure proper imports by adding parent directory to path if needed
+        import sys
+        import os
+        parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if parent_dir not in sys.path:
+            sys.path.insert(0, parent_dir)
+        
+        from core.generators.module_builder import ModuleBuilder, BuilderConfig
+        
+        # Extract parameters
+        module_name = params.get('module_name', 'New_Module')
+        narrative = params.get('narrative', 'A classic fantasy adventure')
+        num_areas = params.get('num_areas', 5)
+        locations_per_area = params.get('locations_per_area', 3)
+        per_area_locations = params.get('per_area_locations', None)  # New parameter
+        
+        # Sanitize module name
+        module_name = module_name.replace(' ', '_')
+        
+        info(f"Starting actual module build for: {module_name}")
+        info(f"Parameters - Areas: {num_areas}, Default locations per area: {locations_per_area}")
+        info(f"Raw params received: {params}")  # Debug full params
+        if per_area_locations:
+            info(f"Custom locations per area: {per_area_locations}")
+            info(f"Type of per_area_locations: {type(per_area_locations)}")
+            info(f"Length: {len(per_area_locations) if isinstance(per_area_locations, list) else 'N/A'}")
+        
+        # Create progress callback to emit updates
+        def progress_callback(stage, message):
             if cancel_build_flag.is_set():
-                socketio.emit('build_cancelled', {'message': 'Build cancelled by user.'})
-                return
-
-            percentage = ((i + 1) / total_stages) * 100
+                return False  # Signal to stop
+            
+            stage_mapping = {
+                'initializing': 0,
+                'base_structure': 1,
+                'npcs': 2,
+                'monsters': 3,
+                'areas': 4,
+                'plots': 5,
+                'connections': 6,
+                'finalizing': 7,
+                'saving': 8
+            }
+            
+            stage_num = stage_mapping.get(stage.lower().replace(' ', '_'), 0)
+            percentage = ((stage_num + 1) / 9) * 100
+            
             socketio.emit('module_progress', {
                 'stage': stage_num,
-                'stage_name': stage_name,
+                'stage_name': stage.replace('_', ' ').title(),
                 'percentage': percentage,
                 'message': message
             })
-            time.sleep(2) # Simulate work
-
-        # Simulate creating the folder
-        module_dir = os.path.join('modules', params['module_name'])
-        os.makedirs(module_dir, exist_ok=True)
-        # Create a dummy manifest
-        dummy_manifest = {
-            "name": params['module_name'],
-            "display_name": params['module_name'].replace('_', ' ').title(),
-            "description": params['narrative'][:150] + '...',
-            "level_range": {"min": 1, "max": 5},
-            "area_count": params['num_areas'],
-            "location_count": params['num_areas'] * params['locations_per_area']
-        }
-        with open(os.path.join(module_dir, f"{params['module_name']}_manifest.json"), 'w') as f:
-            json.dump(dummy_manifest, f, indent=4)
-
-        socketio.emit('module_complete', {
-            'module_name': params['module_name'],
-            'message': 'Module generation finished.'
+            return True  # Continue
+        
+        # Create builder configuration
+        config = BuilderConfig(
+            module_name=module_name,
+            num_areas=num_areas,
+            locations_per_area=locations_per_area,
+            output_directory=f"./modules/{module_name}",
+            verbose=True
+        )
+        
+        # Create the module builder with configuration
+        builder = ModuleBuilder(config)
+        
+        # Set per-area locations if provided
+        info(f"DEBUG: Checking per_area_locations before setting on builder")
+        info(f"  per_area_locations: {per_area_locations}")
+        info(f"  num_areas: {num_areas}")
+        if per_area_locations:
+            info(f"  Length check: {len(per_area_locations)} == {num_areas}? {len(per_area_locations) == num_areas}")
+        
+        if per_area_locations and len(per_area_locations) == num_areas:
+            builder.per_area_locations = per_area_locations
+            info(f"SUCCESS: Set builder.per_area_locations to: {per_area_locations}")
+        else:
+            info(f"WARNING: Not setting per_area_locations (condition not met)")
+        
+        # Set progress callback if the builder supports it
+        if hasattr(builder, 'progress_callback'):
+            builder.progress_callback = progress_callback
+        
+        # Emit initial progress
+        socketio.emit('module_progress', {
+            'stage': 0,
+            'stage_name': 'Initializing',
+            'percentage': 0,
+            'message': f'Starting module generation for "{module_name}"...'
         })
+        
+        # Emit message that we're about to start building
+        socketio.emit('module_progress', {
+            'stage': 1,
+            'stage_name': 'Starting Build',
+            'percentage': 10,
+            'message': 'Module builder initialized, starting generation...'
+        })
+        
+        try:
+            # Call the actual build_module method with the narrative concept
+            info(f"Calling builder.build_module with narrative: {narrative[:100]}...")
+            builder.build_module(narrative)
+            info(f"Module build completed successfully")
+            
+            # Module generation complete
+            if per_area_locations and len(per_area_locations) == num_areas:
+                total_locations = sum(per_area_locations)
+                location_detail = ', '.join([f"Area {i+1}: {count} locations" for i, count in enumerate(per_area_locations)])
+                complete_message = f'Module "{module_name}" successfully generated with {num_areas} areas and {total_locations} total locations ({location_detail})'
+            else:
+                complete_message = f'Module "{module_name}" successfully generated with {num_areas} areas and {locations_per_area} locations per area.'
+            
+            socketio.emit('module_complete', {
+                'module_name': module_name,
+                'message': complete_message
+            })
+        except Exception as build_error:
+            error(f"Error during build_module execution: {build_error}")
+            import traceback
+            error(f"Build traceback: {traceback.format_exc()}")
+            socketio.emit('module_error', {'error': f'Build failed: {str(build_error)}'})
+            raise
 
+    except ImportError as e:
+        error(f"Failed to import module builder: {e}")
+        import traceback
+        error(f"Import traceback: {traceback.format_exc()}")
+        socketio.emit('module_error', {'error': f'Module builder not available: {str(e)}'})
     except Exception as e:
         error(f"Module build failed: {e}")
+        import traceback
+        error(f"Full traceback: {traceback.format_exc()}")
         socketio.emit('module_error', {'error': str(e)})
 
 

@@ -2572,10 +2572,21 @@
                                                min="1" max="10" value="3" required>
                                     </div>
                                     <div style="flex: 1;">
-                                        <label for="locations-per-area">Locations per Area</label>
+                                        <label for="locations-per-area">Default Locations per Area</label>
                                         <input type="number" id="locations-per-area" name="locations-per-area" class="game-input" 
                                                min="1" max="30" value="5" required>
                                     </div>
+                                </div>
+                                
+                                <!-- Per-area location customization -->
+                                <div id="per-area-container" style="display: none; margin-bottom: 20px; padding: 15px; background-color: #1a1a1a; border: 1px solid #444;">
+                                    <label style="margin-bottom: 10px; display: block; color: #FFA500;">Customize Locations per Area (Optional)</label>
+                                    <div id="per-area-inputs" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px;">
+                                        <!-- Dynamically generated inputs will go here -->
+                                    </div>
+                                    <small style="color: #888; display: block; margin-top: 10px;">
+                                        Leave blank to use default value. Each area can have a different number of locations.
+                                    </small>
                                 </div>
                                 
                                 <label for="ai-narrative">Module Concept (AI Narrative Prompt)</label>
@@ -5733,6 +5744,52 @@
         
         // Set up module builder event listeners
         function setupModuleBuilderEventListeners() {
+            // Add event listener for num-areas to update per-area inputs
+            const numAreasInput = document.getElementById('num-areas');
+            const perAreaContainer = document.getElementById('per-area-container');
+            const perAreaInputsDiv = document.getElementById('per-area-inputs');
+            const defaultLocationsInput = document.getElementById('locations-per-area');
+            
+            if (numAreasInput) {
+                numAreasInput.addEventListener('change', () => {
+                    const numAreas = parseInt(numAreasInput.value) || 0;
+                    
+                    if (numAreas > 0) {
+                        // Show the per-area container
+                        perAreaContainer.style.display = 'block';
+                        
+                        // Clear existing inputs
+                        perAreaInputsDiv.innerHTML = '';
+                        
+                        // Create an input for each area
+                        for (let i = 1; i <= numAreas; i++) {
+                            const inputDiv = document.createElement('div');
+                            inputDiv.innerHTML = `
+                                <label for="area-${i}-locations" style="font-size: 0.9em;">Area ${i}:</label>
+                                <input type="number" id="area-${i}-locations" class="game-input" 
+                                       min="1" max="50" placeholder="${defaultLocationsInput.value}"
+                                       style="margin-top: 5px;">
+                            `;
+                            perAreaInputsDiv.appendChild(inputDiv);
+                        }
+                    } else {
+                        // Hide the per-area container if no areas
+                        perAreaContainer.style.display = 'none';
+                    }
+                });
+                
+                // Also update when default locations change
+                defaultLocationsInput.addEventListener('change', () => {
+                    const numAreas = parseInt(numAreasInput.value) || 0;
+                    for (let i = 1; i <= numAreas; i++) {
+                        const input = document.getElementById(`area-${i}-locations`);
+                        if (input) {
+                            input.placeholder = defaultLocationsInput.value;
+                        }
+                    }
+                });
+            }
+            
             // Form submission
             if (moduleForm) {
                 moduleForm.addEventListener('submit', (e) => {
@@ -5743,6 +5800,17 @@
                     const locationsPerArea = parseInt(document.getElementById('locations-per-area').value);
                     const narrative = document.getElementById('ai-narrative').value.trim();
                     
+                    // Collect per-area locations if customized
+                    const perAreaLocations = [];
+                    for (let i = 1; i <= numAreas; i++) {
+                        const input = document.getElementById(`area-${i}-locations`);
+                        if (input && input.value) {
+                            perAreaLocations.push(parseInt(input.value));
+                        } else {
+                            perAreaLocations.push(locationsPerArea); // Use default if not specified
+                        }
+                    }
+                    
                     if (!moduleName || !narrative) {
                         showError('Please provide both module name and narrative');
                         return;
@@ -5752,6 +5820,7 @@
                         module_name: moduleName,
                         num_areas: numAreas,
                         locations_per_area: locationsPerArea,
+                        per_area_locations: perAreaLocations,  // New field for per-area customization
                         narrative: narrative
                     });
                     
