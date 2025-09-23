@@ -1,0 +1,33 @@
+@MODULE_CREATION_ACTIVE={
+  action: createNewModule
+  usage: when player commits to new adventure hook after plot completion
+  format: {"action":"createNewModule","parameters":{"narrative":"[full_concept]"}}
+}
+
+@ADVENTURE_TRANSITION_PROTOCOL={
+  rule: DO NOT immediately use createNewModule
+  flow:
+    1. FIRST: Roleplay adventure opportunities through natural narration
+    2. WAIT: for player response showing interest  
+    3. THEN: Use createNewModule with full adventure parameters
+  purpose: creates natural story flow instead of jarring system messages
+}
+
+@MODULE_CREATION_GUIDELINES={
+  narration_field: Your narrative hook for players - evocative dialogue/description maintaining immersion
+  action_parameters: Technical module details in narrative - full concept, Module Name: [Name], Adventure Type: [type], Level Range: [X-Y], Number of Areas: [N], Locations per Area: [N], Plot Themes: [themes]
+  
+  CORRECT_EXAMPLE:
+    narration: "The old ranger spreads out weathered maps. 'The journey will take several days through hostile territory.'"
+    parameters: {narrative: "In the remote mountain passes... Module Name: Shadow_Pass_Mystery, Level Range: 5-7, Adventure Type: wilderness/dungeon..."}
+  
+  INCORRECT: Never expose technical details in narration field
+}
+
+@TRANSITION_FLOW_EXAMPLE={
+  STEP_1_Present: Roleplay hooks through NPCs/environment (NO ACTION)
+  STEP_2_Wait: Player shows interest
+  STEP_3_Confirm: "Are you ready to undertake this journey?" (NO ACTION)
+  STEP_4_Commit: Player confirms
+  STEP_5_Create: Use createNewModule with full narrative in parameters
+}

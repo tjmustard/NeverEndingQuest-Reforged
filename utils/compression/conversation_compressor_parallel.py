@@ -213,10 +213,19 @@ class ParallelConversationCompressor:
                     with open(compressed_prompt_file, 'r', encoding='utf-8') as f:
                         compressed_content = f.read()
 
-                    # If module creation injection is enabled, append the module transition prompt
+                    # If module creation injection is enabled, append the module creation micro prompt
                     if self.inject_module_creation:
+                        # First try the new micro prompt file
+                        module_creation_file = Path("prompts/module_creation_micro_prompt.txt")
+                        # Fallback to old file if it exists
                         module_transition_file = Path("prompts/generators/module_transition.txt")
-                        if module_transition_file.exists():
+                        
+                        if module_creation_file.exists():
+                            with open(module_creation_file, 'r', encoding='utf-8') as f:
+                                module_creation_content = f.read()
+                            compressed_content += "\n\n" + module_creation_content
+                            print(f"[SYSTEM PROMPT] Module creation micro prompt injected ({len(module_creation_content):,} chars)")
+                        elif module_transition_file.exists():
                             with open(module_transition_file, 'r', encoding='utf-8') as f:
                                 module_transition_content = f.read()
                             compressed_content += "\n\n" + module_transition_content
