@@ -169,6 +169,7 @@ RESET_COLOR = "\033[0m"
 json_file = "modules/conversation_history/conversation_history.json"
 
 needs_conversation_history_update = False
+should_inject_creation_prompt = False  # Global flag for module creation prompt injection
 
 # Message combination system state variables
 held_response = None
@@ -2058,6 +2059,7 @@ def save_conversation_history(history):
         error(f"FAILURE: Failed to save conversation history", exception=e, category="file_operations")
 
 def get_ai_response(conversation_history, validation_retry_count=0):
+    global should_inject_creation_prompt
     status_processing_ai()
     
     # Import action predictor and config
@@ -2141,12 +2143,8 @@ def get_ai_response(conversation_history, validation_retry_count=0):
                 json.dump(conversation_history, f, indent=2, ensure_ascii=False)
             
             # Compress using our working compressor with settings from config
-            # Pass the module creation flag to the compressor if available in this context
-            try:
-                inject_flag = should_inject_creation_prompt
-            except NameError:
-                inject_flag = False
-            compressor = ParallelConversationCompressor(inject_module_creation=inject_flag)
+            # Pass the module creation flag to the compressor (now a global variable)
+            compressor = ParallelConversationCompressor(inject_module_creation=should_inject_creation_prompt)
             messages_to_send = compressor.process_conversation_history(str(temp_file))
             
             # Clean up temp file
@@ -2433,7 +2431,7 @@ def check_all_modules_plot_completion():
     return all_modules_data
 
 def main_game_loop():
-    global needs_conversation_history_update
+    global needs_conversation_history_update, should_inject_creation_prompt
 
     # Ensure debug directories and files exist
     import os
@@ -3035,7 +3033,7 @@ def main_game_loop():
 
             # Check ALL modules for plot completion before suggesting module creation
             module_creation_prompt = ""
-            should_inject_creation_prompt = False  # Initialize for later use
+            # should_inject_creation_prompt is now a global variable
             try:
                 # Debug current module detection
                 current_module = party_tracker_data.get('module', '').replace(' ', '_')

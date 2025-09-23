@@ -1545,8 +1545,28 @@ def ai_driven_module_creation(params: Dict[str, Any], progress_callback=None) ->
         builder = ModuleBuilder(config)
         
         # Set progress callback on builder if available
+        # Create a wrapper to convert old format to new format
         if progress_callback:
-            builder.progress_callback = progress_callback
+            def wrapped_callback(status, message):
+                """Convert old two-argument format to new dictionary format"""
+                # Map old status names to stages
+                stage_map = {
+                    'initializing': 4,
+                    'base_structure': 5,
+                    'areas': 5,
+                    'plot': 6,
+                    'npcs': 6,
+                    'finalizing': 7
+                }
+                stage = stage_map.get(status, 5)
+                progress_callback({
+                    'stage': stage,
+                    'total_stages': 9,
+                    'stage_name': status.title(),
+                    'percentage': int((stage / 9) * 100),
+                    'message': message
+                })
+            builder.progress_callback = wrapped_callback
         
         # Store AI context for generators to use
         # The generators will pick up these values from the enhanced_concept text
