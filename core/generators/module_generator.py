@@ -477,6 +477,7 @@ class ModuleGenerator:
     def generate_field(self, field_path: str, schema_info: Dict[str, Any], 
                       context: Dict[str, Any]) -> Any:
         """Generate content for a specific field"""
+        import time
         field_name = field_path.split(".")[-1]
         guide_attr = field_name
         
@@ -506,6 +507,8 @@ If the field expects an object, return just the object.
         
         print(f"DEBUG: [ModuleGenerator] Making API call to {DM_MAIN_MODEL}...")
         print(f"DEBUG: [ModuleGenerator] Prompt length: {len(prompt)} characters")
+        print(f"INFO: Calling OpenAI API for {field_path}... This may take 10-30 seconds.")
+        start_time = time.time()
         try:
             response = client.chat.completions.create(
                 model=DM_MAIN_MODEL,
@@ -515,7 +518,8 @@ If the field expects an object, return just the object.
                     {"role": "user", "content": prompt}
                 ]
             )
-            print(f"DEBUG: [ModuleGenerator] API call completed successfully")
+            elapsed = time.time() - start_time
+            print(f"DEBUG: [ModuleGenerator] API call completed successfully in {elapsed:.1f} seconds")
         except Exception as e:
             print(f"ERROR: [ModuleGenerator] API call failed: {e}")
             import traceback
@@ -561,13 +565,17 @@ If the field expects an object, return just the object.
         # Build context with initial concept
         context = {"initialConcept": initial_concept}
         
-        for field_path in field_order:
+        total_fields = len(field_order)
+        for idx, field_path in enumerate(field_order, 1):
             # Skip if already provided in custom_values
             if self.get_nested_value(module_data, field_path) is not None:
                 continue
             
             # Get schema info for this field
             schema_info = self.get_field_schema(field_path)
+            
+            # Progress feedback
+            print(f"MODULE_GENERATION_PROGRESS: Generating field {idx}/{total_fields}: {field_path}")
             
             # Generate the field
             value = self.generate_field(field_path, schema_info, context)
@@ -578,7 +586,7 @@ If the field expects an object, return just the object.
             # Update context with the new field
             self.set_nested_value(context, field_path, value)
             
-            print(f"DEBUG: [Module Generator] Generated: {field_path}")
+            print(f"DEBUG: [Module Generator] Generated: {field_path} (field {idx}/{total_fields} complete)")
         
         # Get module name for file operations
         module_name = module_data.get("moduleName", "")
