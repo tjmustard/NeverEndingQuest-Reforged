@@ -1064,6 +1064,8 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
         debug("VALIDATION: *** VALIDATION DEBUG - createNewModule detected ***", category="ai_validation")
         debug(f"VALIDATION: User input that triggered this: {user_input}", category="ai_validation")
         debug("VALIDATION: Last two messages validation AI sees:", category="ai_validation")
+        # Get last two messages from validation conversation
+        last_two_messages = validation_conversation[-2:] if len(validation_conversation) >= 2 else validation_conversation
         for i, msg in enumerate(last_two_messages):
             debug(f"VALIDATION: Message {i+1}: {msg['role']}: {msg['content'][:100]}...", category="ai_validation")
         debug("VALIDATION: *** END VALIDATION DEBUG ***", category="ai_validation")

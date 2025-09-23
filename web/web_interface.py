@@ -2510,7 +2510,7 @@ def handle_party_data_request():
         if current_module and current_area_id and current_location_id:
             # Construct the path to the current area file
             areas_dir = os.path.join("modules", current_module, "areas")
-            area_file_path = os.path.join(areas_dir, f"{current_area_id}_BU.json")
+            area_file_path = os.path.join(areas_dir, f"{current_area_id}.json")
             
             if os.path.exists(area_file_path):
                 area_data = safe_read_json(area_file_path)
