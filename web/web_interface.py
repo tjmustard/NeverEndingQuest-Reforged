@@ -146,11 +146,14 @@ import logging
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)  # Only show errors, not every HTTP request
 
+# Import shared state
+from web.shared_state import module_progress_queue
+
 # Global variables for managing output
 game_output_queue = queue.Queue()
 debug_output_queue = queue.Queue()
 user_input_queue = queue.Queue()
-module_progress_queue = queue.Queue()  # Queue for module creation progress
+# module_progress_queue imported from shared_state
 game_thread = None
 original_stdout = sys.stdout
 original_stderr = sys.stderr
@@ -3301,6 +3304,10 @@ def run_game_loop():
 
 def send_output_to_clients():
     """Send queued output to all connected clients"""
+    global module_progress_queue
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    print(f"DEBUG: [Web Interface] [{timestamp}] send_output_to_clients thread started")
     last_token_update = time.time()
     
     while True:
@@ -3324,11 +3331,24 @@ def send_output_to_clients():
                     break
             
             # Send module progress updates
+            if not module_progress_queue.empty():
+                from datetime import datetime
+                timestamp = datetime.now().strftime("%H:%M:%S")
+                print(f"DEBUG: [Web Interface] [{timestamp}] Module progress queue has items, processing...")
             while not module_progress_queue.empty():
                 try:
+                    from datetime import datetime
+                    timestamp = datetime.now().strftime("%H:%M:%S")
                     progress_data = module_progress_queue.get()
+                    print(f"DEBUG: [Web Interface] [{timestamp}] Got progress data from queue: Stage {progress_data.get('stage')}")
                     socketio.emit('module_creation_progress', progress_data)
-                except Exception:
+                    print(f"DEBUG: [Web Interface] [{timestamp}] Emitted module_creation_progress - Stage {progress_data.get('stage')}/{progress_data.get('total_stages')}")
+                except Exception as e:
+                    from datetime import datetime
+                    timestamp = datetime.now().strftime("%H:%M:%S")
+                    print(f"DEBUG: [Web Interface] [{timestamp}] Failed to emit module progress: {e}")
+                    import traceback
+                    traceback.print_exc()
                     # If queue operation or emit fails, just continue
                     break
             

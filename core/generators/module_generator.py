@@ -795,47 +795,66 @@ If the field expects an object, return just the object.
     
     def update_area_with_prefix(self, area_data: Dict[str, Any], prefix: str) -> Dict[str, Any]:
         """Update all location IDs in area data to use the specified prefix"""
-        # Update map room IDs
+        import re
+        
+        # Build mapping of old IDs to new IDs
+        id_mapping = {}
+        
+        # First pass: build the mapping for all location IDs
+        if "locations" in area_data:
+            for location in area_data["locations"]:
+                if "locationId" in location:
+                    old_id = location["locationId"]
+                    # Extract the numeric part from IDs like A01, B02, etc.
+                    match = re.match(r'^[A-Z]+(\d+)$', old_id)
+                    if match:
+                        num = match.group(1)
+                        new_id = prefix + num.zfill(2)  # Ensure 2 digits
+                        id_mapping[old_id] = new_id
+        
+        # Second pass: update all location IDs and references
+        if "locations" in area_data:
+            for location in area_data["locations"]:
+                # Update the location ID itself
+                if "locationId" in location and location["locationId"] in id_mapping:
+                    location["locationId"] = id_mapping[location["locationId"]]
+                
+                # Update connectivity references
+                if "connectivity" in location:
+                    location["connectivity"] = [
+                        id_mapping.get(conn, conn) for conn in location["connectivity"]
+                    ]
+        
+        # Update map room IDs if they match location IDs
         if "map" in area_data and "rooms" in area_data["map"]:
             for room in area_data["map"]["rooms"]:
-                if "id" in room and room["id"].startswith("R"):
-                    # Extract the number part and add new prefix
-                    num = room["id"][1:]
-                    new_id = prefix + num
+                if "id" in room and room["id"] in id_mapping:
                     old_id = room["id"]
+                    new_id = id_mapping[old_id]
                     room["id"] = new_id
                     
                     # Update room name if it contains the ID
                     if "name" in room and old_id in room["name"]:
                         room["name"] = room["name"].replace(old_id, new_id)
-                    
-                    # Update connections
-                    if "connections" in room:
-                        room["connections"] = [
-                            prefix + conn[1:] if conn.startswith("R") else conn
-                            for conn in room["connections"]
-                        ]
+                
+                # Update connections
+                if "connections" in room:
+                    room["connections"] = [
+                        id_mapping.get(conn, conn) for conn in room["connections"]
+                    ]
         
         # Update layout grid
         if "map" in area_data and "layout" in area_data["map"]:
             for i, row in enumerate(area_data["map"]["layout"]):
                 for j, cell in enumerate(row):
-                    if cell.startswith("R"):
-                        area_data["map"]["layout"][i][j] = prefix + cell[1:]
+                    if cell in id_mapping:
+                        area_data["map"]["layout"][i][j] = id_mapping[cell]
         
-        # Update location IDs
-        if "locations" in area_data:
-            for location in area_data["locations"]:
-                if "locationId" in location and location["locationId"].startswith("R"):
-                    num = location["locationId"][1:]
-                    location["locationId"] = prefix + num
-                
-                # Update connectivity
-                if "connectivity" in location:
-                    location["connectivity"] = [
-                        prefix + conn[1:] if conn.startswith("R") else conn
-                        for conn in location["connectivity"]
-                    ]
+        # Update areaConnectivityId references (these reference location IDs)
+        if "areaConnectivityId" in area_data:
+            area_data["areaConnectivityId"] = [
+                id_mapping.get(conn_id, conn_id) for conn_id in area_data["areaConnectivityId"]
+            ]
         
         return area_data
     

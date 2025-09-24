@@ -1030,14 +1030,22 @@ Please use a valid location that exists in the current area ({current_area_id}) 
             # Define progress callback to send updates to web interface
             def module_progress_callback(progress_data):
                 """Send module creation progress to web interface"""
+                from datetime import datetime
+                timestamp = datetime.now().strftime("%H:%M:%S")
+                print(f"DEBUG: [Action Handler] [{timestamp}] module_progress_callback called - Stage {progress_data.get('stage')}")
+                
                 # Try to use the module progress queue if available (web mode)
                 try:
-                    from web.web_interface import module_progress_queue
+                    from web.shared_state import module_progress_queue
                     module_progress_queue.put(progress_data)
+                    print(f"DEBUG: [Action Handler] [{timestamp}] Successfully queued progress for stage {progress_data.get('stage')}")
                     debug(f"MODULE_PROGRESS: Queued for web - Stage {progress_data.get('stage')}/{progress_data.get('total_stages')} - {progress_data.get('message')}", category="module_management")
-                except ImportError:
+                except ImportError as e:
+                    print(f"DEBUG: [Action Handler] [{timestamp}] ImportError: {e}")
                     # Terminal mode - just log progress
                     debug(f"MODULE_PROGRESS: Stage {progress_data.get('stage')}/{progress_data.get('total_stages')} - {progress_data.get('message')}", category="module_management")
+                except Exception as e:
+                    print(f"DEBUG: [Action Handler] [{timestamp}] Unexpected error: {e}")
             
             # Check if this is a single narrative parameter (new format)
             # or multiple parameters (old format)
