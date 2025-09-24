@@ -772,7 +772,10 @@ Create atmospheric travel narration that leads into this adventure."""
             
             if area_data:
                 print(f"DEBUG: [Module Stitcher] Applying new prefix '{new_prefix}' to area {area_data.get('areaId')}")
-                updated_area_data = temp_builder.update_area_with_prefix(area_data, new_prefix)
+                # Use ModuleGenerator instead of ModuleBuilder for update_area_with_prefix
+                from core.generators.module_generator import ModuleGenerator
+                temp_generator = ModuleGenerator()
+                updated_area_data = temp_generator.update_area_with_prefix(area_data, new_prefix)
                 safe_json_dump(updated_area_data, area_file_path)
                 conflicts_resolved += len(updated_area_data.get('locations', []))
 

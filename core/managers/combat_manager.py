@@ -153,6 +153,8 @@ import core.ai.cumulative_summary as cumulative_summary
 from utils.enhanced_logger import debug, info, warning, error, game_event, set_script_name
 # Import combat message compressor for optimizing conversation history
 from core.ai.combat_compressor import CombatUserMessageCompressor
+# Import inventory context matcher for enhancing player combat actions
+from core.ai.inventory_context_integration import enhance_player_input_with_inventory
 
 # Set script name for logging
 set_script_name(__name__)
@@ -2441,6 +2443,25 @@ Player: {initial_prompt_text}"""
        # Skip empty input to prevent infinite loop
        if not user_input_text or not user_input_text.strip():
            continue
+       
+       # Enhance player input with inventory context for combat
+       try:
+           # Load fresh player data for inventory
+           player_file = path_manager.get_character_path(normalize_character_name(player_name_display))
+           fresh_player_data = safe_json_load(player_file)
+           
+           # Enhance the input with inventory context (combat mode)
+           user_input_text = enhance_player_input_with_inventory(
+               user_input_text,
+               fresh_player_data,  # character_data
+               party_tracker_data,  # party_tracker_data
+               None,  # characters_data not needed
+               in_combat=True  # This is combat context
+           )
+           debug(f"COMBAT_LOOP: Enhanced player input with inventory context", category="combat_events")
+       except Exception as e:
+           debug(f"COMBAT_LOOP: Failed to enhance input with inventory context: {e}", category="combat_events")
+           # Continue with unenhanced input if enhancement fails
        
        # Prepare dynamic state info for all creatures - compact format
        dynamic_state_parts = []

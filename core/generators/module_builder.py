@@ -71,6 +71,7 @@ class ModuleBuilder:
         self.plots_data = {}
         self.context = ModuleContext()
         self.progress_callback = None  # For progress reporting
+        self.per_area_locations = None  # For custom locations per area
         
         # Initialize generators
         self.module_gen = ModuleGenerator()
@@ -128,21 +129,41 @@ MODULE INDEPENDENCE RULES:
         self.log("Starting module build process...")
         self.log(f"Initial concept: {initial_concept}")
         
-        # Get existing characters for context
-        existing_characters = self.get_party_members()
-        self.context_header = self.create_context_header(existing_characters)
-        
-        # Create required directory structure first
-        self.create_module_directories()
-        
-        # Initialize context
-        self.context.module_name = self.config.module_name.replace("_", " ")
-        self.context.module_id = self.config.module_name
-        
-        # Step 1: Generate module overview with context
-        self.log("Step 1: Generating module overview...")
-        contextualized_concept = self.context_header + initial_concept
-        self.module_data = self.module_gen.generate_module(contextualized_concept, context=self.context)
+        try:
+            # Report progress if callback available
+            if self.progress_callback:
+                self.progress_callback('initializing', 'Getting party members...')
+            
+            # Get existing characters for context
+            existing_characters = self.get_party_members()
+            self.context_header = self.create_context_header(existing_characters)
+            
+            # Report progress
+            if self.progress_callback:
+                self.progress_callback('base_structure', 'Creating directory structure...')
+            
+            # Create required directory structure first
+            self.create_module_directories()
+            
+            # Initialize context
+            self.context.module_name = self.config.module_name.replace("_", " ")
+            self.context.module_id = self.config.module_name
+            
+            # Step 1: Generate module overview with context
+            self.log("Step 1: Generating module overview...")
+            if self.progress_callback:
+                self.progress_callback('base_structure', 'Generating module overview from AI...')
+            
+            # Add number of areas to the concept so AI generates the right amount
+            contextualized_concept = self.context_header + initial_concept
+            contextualized_concept += f"\n\nIMPORTANT: Generate exactly {self.config.num_areas} regions in the worldMap array."
+            
+            self.module_data = self.module_gen.generate_module(contextualized_concept, context=self.context)
+        except Exception as e:
+            self.log(f"ERROR in build_module: {e}")
+            import traceback
+            self.log(f"Traceback: {traceback.format_exc()}")
+            raise
         
         # Extract NPCs and factions from module data
         self._extract_module_entities()
@@ -278,11 +299,25 @@ MODULE INDEPENDENCE RULES:
         """Generate detailed area files from the module world map"""
         world_map = self.module_data.get("worldMap", [])
         
+        self.log(f"Starting area generation for {self.config.num_areas} areas")
+        self.log(f"Default locations per area: {self.config.locations_per_area}")
+        if self.per_area_locations:
+            self.log(f"Custom per_area_locations provided: {self.per_area_locations}")
+        else:
+            self.log(f"No custom per_area_locations - using defaults")
+        
         for i, region in enumerate(world_map[:self.config.num_areas]):
             area_id = region["mapId"]
             
             # Determine area type based on region description
             area_type = self.determine_area_type(region)
+            
+            # Use custom per-area locations if provided, otherwise use default
+            if self.per_area_locations and i < len(self.per_area_locations):
+                num_locations_for_area = self.per_area_locations[i]
+                self.log(f"Using custom locations for area {i+1}: {num_locations_for_area}")
+            else:
+                num_locations_for_area = self.config.locations_per_area
             
             config = AreaConfig(
                 area_type=area_type,
@@ -290,7 +325,7 @@ MODULE INDEPENDENCE RULES:
                 complexity="moderate",
                 danger_level=region["dangerLevel"],
                 recommended_level=region["recommendedLevel"],
-                num_locations=self.config.locations_per_area
+                num_locations=num_locations_for_area
             )
             
             # Add area to context
@@ -1152,14 +1187,56 @@ Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         self.log(f"Created {backup_count} _BU.json backup files for reset functionality")
     
     def get_location_prefix(self, area_index: int) -> str:
-        """Get the appropriate prefix for location IDs based on area index"""
-        # Use letters A-Z for first 26 areas, then AA-AZ, BA-BZ, etc.
-        if area_index < 26:
-            return chr(65 + area_index)  # A-Z
-        else:
-            first_letter = chr(65 + (area_index // 26) - 1)
-            second_letter = chr(65 + (area_index % 26))
-            return first_letter + second_letter
+        """Get a globally unique prefix for location IDs by checking existing modules"""
+        from utils.encoding_utils import safe_json_load
+        import os
+        
+        # Load world registry to check existing location IDs
+        used_prefixes = set()
+        world_registry_path = "modules/world_registry.json"
+        
+        if os.path.exists(world_registry_path):
+            registry = safe_json_load(world_registry_path)
+            if registry:
+                # Check all areas in all modules for used location prefixes
+                for area_id, area_info in registry.get('areas', {}).items():
+                    module_name = area_info.get('module')
+                    if module_name:
+                        # Load the actual area file to get location IDs
+                        area_path = f"modules/{module_name}/areas/{area_id}.json"
+                        if os.path.exists(area_path):
+                            area_data = safe_json_load(area_path)
+                            if area_data and 'locations' in area_data:
+                                for loc in area_data['locations']:
+                                    loc_id = loc.get('locationId', '')
+                                    if loc_id:
+                                        # Extract prefix (letters before numbers)
+                                        import re
+                                        match = re.match(r'^([A-Z]+)\d+', loc_id)
+                                        if match:
+                                            used_prefixes.add(match.group(1))
+        
+        # Generate a unique prefix not in use
+        candidate_index = area_index
+        while True:
+            if candidate_index < 26:
+                prefix = chr(65 + candidate_index)  # A-Z
+            else:
+                first_letter = chr(65 + (candidate_index // 26) - 1)
+                second_letter = chr(65 + (candidate_index % 26))
+                prefix = first_letter + second_letter
+            
+            if prefix not in used_prefixes:
+                self.log(f"Assigned unique location prefix '{prefix}' for area {area_index}")
+                return prefix
+            
+            candidate_index += 1
+            if candidate_index > 702:  # Safety limit (26 + 26*26 = 702 possible prefixes)
+                # Fallback to module-specific prefix
+                import random
+                prefix = f"M{self.config.module_name[:3].upper()}{random.randint(1,99)}"
+                self.log(f"Warning: Using fallback prefix '{prefix}' due to exhausted standard prefixes")
+                return prefix
     
     
     def _create_bidirectional_connection(self, area_files: Dict[str, Any], from_area: str, to_area: str):
@@ -1510,8 +1587,28 @@ def ai_driven_module_creation(params: Dict[str, Any], progress_callback=None) ->
         builder = ModuleBuilder(config)
         
         # Set progress callback on builder if available
+        # Create a wrapper to convert old format to new format
         if progress_callback:
-            builder.progress_callback = progress_callback
+            def wrapped_callback(status, message):
+                """Convert old two-argument format to new dictionary format"""
+                # Map old status names to stages
+                stage_map = {
+                    'initializing': 4,
+                    'base_structure': 5,
+                    'areas': 5,
+                    'plot': 6,
+                    'npcs': 6,
+                    'finalizing': 7
+                }
+                stage = stage_map.get(status, 5)
+                progress_callback({
+                    'stage': stage,
+                    'total_stages': 9,
+                    'stage_name': status.title(),
+                    'percentage': int((stage / 9) * 100),
+                    'message': message
+                })
+            builder.progress_callback = wrapped_callback
         
         # Store AI context for generators to use
         # The generators will pick up these values from the enhanced_concept text

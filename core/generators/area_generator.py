@@ -442,6 +442,7 @@ class AreaGenerator:
         # Determine number of locations
         if config.num_locations is not None:
             num_locations = config.num_locations
+            print(f"DEBUG: [AreaGenerator] Using explicit num_locations: {num_locations} for area: {area_name}")
         else:
             # Use size-based calculation if not specified
             location_counts = {
@@ -450,6 +451,7 @@ class AreaGenerator:
                 "large": random.randint(25, 35)
             }
             num_locations = location_counts.get(config.size, 15)
+            print(f"DEBUG: [AreaGenerator] Using size-based locations: {num_locations} for size: {config.size}")
         
         # Generate a refined, general area name and its description
         refined_area_name, area_description = self.generate_area_name_and_description(area_name, config)

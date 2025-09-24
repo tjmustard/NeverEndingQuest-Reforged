@@ -597,9 +597,51 @@ def update_journal_with_summary(adventure_summary, party_tracker_data, location_
     }
     
     journal_data["entries"].append(new_entry)
-    
+
     if safe_write_json("journal.json", journal_data):
         debug_print("Journal updated successfully")
+
+        # Process memories for companion NPCs
+        try:
+            from core.memories.companion_memory import CompanionMemoryManager
+            memory_manager = CompanionMemoryManager()
+
+            # Get list of party NPCs
+            party_npcs = []
+            for npc in party_tracker_data.get('partyNPCs', []):
+                npc_name = npc.get('name', '') if isinstance(npc, dict) else str(npc)
+                if npc_name:
+                    # Extract just the first name (e.g., "Kira" from "Scout Kira")
+                    first_name = npc_name.split()[0] if ' ' in npc_name else npc_name
+                    party_npcs.append(first_name)
+
+            # Process the journal entry for memories
+            if party_npcs:
+                memories_created = memory_manager.process_journal_entry(
+                    new_entry,
+                    party_npcs
+                )
+
+                if memories_created:
+                    debug_print(f"Created memories for: {', '.join(memories_created.keys())}")
+
+                    # Auto-compress the memories for AI consumption
+                    try:
+                        import subprocess
+                        result = subprocess.run(
+                            ["python", "scripts/memory_management/compress_memories.py"],
+                            capture_output=True,
+                            text=True,
+                            timeout=5
+                        )
+                        if result.returncode == 0:
+                            debug_print("Compressed memories for AI consumption")
+                    except Exception as compress_error:
+                        debug_print(f"Memory compression failed (non-fatal): {compress_error}")
+        except Exception as e:
+            # Don't let memory system errors break journal updates
+            debug_print(f"Memory processing error (non-fatal): {e}")
+
         return True
     else:
         debug_print("Failed to update journal")

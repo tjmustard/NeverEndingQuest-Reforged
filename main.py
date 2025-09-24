@@ -107,6 +107,7 @@ from updates.update_world_time import update_world_time
 from core.ai.conversation_utils import update_conversation_history, update_character_data
 from updates.update_character_info import update_character_info
 from core.managers.level_up_manager import LevelUpSession # Add this line
+from core.ai.incremental_compression import IncrementalLocationCompressor
 
 # Import new manager modules
 from core.managers import location_manager
@@ -129,6 +130,7 @@ from core.managers.status_manager import (
 from utils.file_operations import safe_write_json, safe_read_json
 from utils.module_path_manager import ModulePathManager
 from core.managers.campaign_manager import CampaignManager
+from core.ai.inventory_context_integration import build_enhanced_dm_note
 
 # Import training data collection
 # from simple_training_collector import log_complete_interaction  # DISABLED
@@ -167,6 +169,7 @@ RESET_COLOR = "\033[0m"
 json_file = "modules/conversation_history/conversation_history.json"
 
 needs_conversation_history_update = False
+should_inject_creation_prompt = False  # Global flag for module creation prompt injection
 
 # Message combination system state variables
 held_response = None
@@ -523,6 +526,9 @@ def create_module_validation_context(party_tracker_data, path_manager):
         
         validation_context = f"MODULE VALIDATION DATA:\nCurrent Module: {current_module}\nCurrent Area: {current_area_id}\nCurrent Location: {current_location_id}\n\n"
         
+        # NPC context now dynamically built in validate_dm_response function
+        # No longer loading static NPC compendium here
+        
         # Get all valid locations in current area and location-specific NPCs
         area_file = path_manager.get_area_path(current_area_id)
         current_location_npcs = []
@@ -637,7 +643,15 @@ def create_module_validation_context(party_tracker_data, path_manager):
             # print("="*60)
             # print()
             
-            validation_context += "VALID CHARACTERS (All Module Codexes):\n"
+            # Add party members to the valid characters list
+            validation_context += "VALID CHARACTERS (Party Members and All Module NPCs):\n"
+            
+            # First add party members from party tracker
+            party_members = party_tracker_data.get("partyMembers", [])
+            for member in party_members:
+                validation_context += f"- {member} (party member)\n"
+            
+            # Then add NPCs from codexes
             if valid_npcs:
                 validation_context += "\n".join([f"- {npc}" for npc in valid_npcs])
             else:
@@ -663,7 +677,14 @@ def create_module_validation_context(party_tracker_data, path_manager):
                 except (json.JSONDecodeError, KeyError):
                     continue
             
-            validation_context += "VALID CHARACTERS in module:\n"
+            validation_context += "VALID CHARACTERS (Party Members and Module Characters):\n"
+            
+            # First add party members from party tracker
+            party_members = party_tracker_data.get("partyMembers", [])
+            for member in party_members:
+                validation_context += f"- {member} (party member)\n"
+            
+            # Then add NPCs from character files
             if valid_npcs:
                 validation_context += "\n".join([f"- {npc}" for npc in valid_npcs])
             else:
@@ -712,15 +733,127 @@ CRITICAL: If validation fails due to wrong NPC for location, provide specific co
         # print(f"DEBUG: Traceback: {traceback.format_exc()}")
         return f"MODULE VALIDATION DATA: Error loading module data - {str(e)}"
 
+def validate_json_structure(response_text):
+    """
+    Pre-validate JSON structure before sending to AI validator.
+    Returns tuple: (is_valid, fixed_response, error_message)
+    """
+    try:
+        # Parse the JSON
+        parsed = json.loads(response_text)
+        
+        # Check top-level structure
+        if not isinstance(parsed, dict):
+            return False, None, "Response is not a JSON object"
+        
+        if "narration" not in parsed:
+            return False, None, "Missing 'narration' field"
+        
+        if "actions" not in parsed:
+            # Add empty actions array if missing
+            parsed["actions"] = []
+            fixed = json.dumps(parsed, ensure_ascii=True)
+            return True, fixed, "Added missing actions array"
+        
+        if not isinstance(parsed["actions"], list):
+            return False, None, "'actions' must be an array"
+        
+        # Check each action's structure
+        fixed_actions = []
+        structure_issues = []
+        
+        for i, action in enumerate(parsed["actions"]):
+            if not isinstance(action, dict):
+                structure_issues.append(f"Action {i+1} is not an object")
+                continue
+                
+            # Check if action has correct structure
+            if "action" in action and "parameters" in action:
+                # Correct structure
+                fixed_actions.append(action)
+            elif len(action) == 1:
+                # Likely wrong format like {"updatePlot": {...}}
+                action_name = list(action.keys())[0]
+                action_params = action[action_name]
+                
+                # Auto-fix to correct structure
+                fixed_action = {
+                    "action": action_name,
+                    "parameters": action_params if isinstance(action_params, dict) else {}
+                }
+                fixed_actions.append(fixed_action)
+                structure_issues.append(f"Auto-fixed action {i+1}: {action_name}")
+            else:
+                structure_issues.append(f"Action {i+1} has invalid structure")
+        
+        # If we fixed any actions, return the fixed version
+        if structure_issues and len(fixed_actions) == len(parsed["actions"]):
+            parsed["actions"] = fixed_actions
+            fixed_json = json.dumps(parsed, ensure_ascii=True, indent=2)
+            return True, fixed_json, f"Auto-fixed structure issues: {'; '.join(structure_issues)}"
+        elif structure_issues:
+            return False, None, f"Structure errors: {'; '.join(structure_issues)}"
+        
+        # All good
+        return True, response_text, "Structure valid"
+        
+    except json.JSONDecodeError as e:
+        return False, None, f"Invalid JSON: {str(e)}"
+    except Exception as e:
+        return False, None, f"Validation error: {str(e)}"
+
 def validate_ai_response(primary_response, user_input, validation_prompt_text, conversation_history, party_tracker_data):
     print("DEBUG: NPC validation running...")
     status_validating()
-    # Get the last two messages from the conversation history
-    last_two_messages = conversation_history[-2:]
-
-    # Ensure we have at least two messages
-    while len(last_two_messages) < 2:
-        last_two_messages.insert(0, {"role": "assistant", "content": "Previous context not available."})
+    
+    # Pre-validate JSON structure
+    is_valid_structure, fixed_response, structure_message = validate_json_structure(primary_response)
+    
+    if not is_valid_structure:
+        # Structure is too broken to fix automatically
+        print(f"ERROR: JSON structure invalid - {structure_message}")
+        return (False, f"JSON structure error: {structure_message}. Response must be valid JSON with 'narration' and 'actions' fields.")
+    
+    # Use fixed response if structure was auto-corrected
+    response_to_validate = fixed_response if fixed_response != primary_response else primary_response
+    
+    if fixed_response != primary_response:
+        print(f"INFO: Auto-fixed JSON structure - {structure_message}")
+    
+    # The validation needs sufficient context to understand what happened
+    # We need to include recent conversation history, not just the last two messages
+    # This helps the validator understand ongoing narratives like ritual completions
+    
+    # Get the last several messages for context (excluding system messages and failed validations)
+    recent_messages = []
+    skip_next_assistant = False
+    
+    for i in range(len(conversation_history) - 1, -1, -1):
+        msg = conversation_history[i]
+        content = msg.get("content", "")
+        
+        # If we see an Error Note, mark to skip the previous assistant message (failed attempt)
+        if msg["role"] == "user" and content.startswith("Error Note:"):
+            skip_next_assistant = True
+            continue  # Don't include the Error Note itself
+            
+        # Skip system messages and location transitions
+        if msg["role"] in ["user", "assistant"]:
+            # Skip this assistant message if it's a failed validation attempt
+            if msg["role"] == "assistant" and skip_next_assistant:
+                skip_next_assistant = False
+                continue
+                
+            # Skip pure system notes
+            if not content.startswith(("Location transition:", "Module transition:")):
+                recent_messages.insert(0, msg)
+                # Get last 4 messages (2 exchanges) for context
+                if len(recent_messages) >= 4:
+                    break
+    
+    # Ensure we have at least some context
+    while len(recent_messages) < 4:
+        recent_messages.insert(0, {"role": "assistant", "content": "Previous context not available."})
 
     # Get location data from party tracker
     current_location_id = party_tracker_data["worldConditions"]["currentLocationId"]
@@ -881,16 +1014,48 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
     except Exception as e:
         debug(f"VALIDATION: Error extracting character names: {e}", category="ai_validation")
     
+    # Add structure validation status to context
+    structure_validation_note = ""
+    if fixed_response != primary_response:
+        structure_validation_note = f"JSON STRUCTURE PRE-VALIDATED: {structure_message}. Structure has been auto-corrected. Focus on validating CONTENT only (NPCs, locations, game rules)."
+    else:
+        structure_validation_note = "JSON STRUCTURE PRE-VALIDATED: Structure is correct. Focus on validating CONTENT only (NPCs, locations, game rules)."
+    
+    # Build dynamic NPC context
+    npc_validation_context = ""
+    try:
+        from core.ai.build_npc_context import build_npc_validation_context
+        
+        # Get party NPCs from party tracker data
+        party_npc_names = [npc.get('name') for npc in party_tracker_data.get('partyNPCs', [])]
+        
+        # Build compressed NPC context
+        npc_validation_context = build_npc_validation_context(
+            current_module=party_tracker_data.get('module', 'Unknown'),
+            current_location=party_tracker_data.get('worldConditions', {}).get('currentLocationId', 'Unknown'),
+            party_npcs=party_npc_names
+        )
+    except Exception as e:
+        print(f"ERROR: Failed to build NPC context: {e}")
+        import traceback
+        traceback.print_exc()
+    
     validation_conversation = [
         {"role": "system", "content": validation_prompt_text},
+        {"role": "system", "content": structure_validation_note},
+        {"role": "system", "content": npc_validation_context},  # Always include, even if empty
         {"role": "system", "content": location_details},
         {"role": "system", "content": user_input_context},
         {"role": "system", "content": module_data_context},
         {"role": "system", "content": character_inventory_context} if character_inventory_context else None,
-        last_two_messages[0],
-        last_two_messages[1],
-        {"role": "assistant", "content": primary_response}
     ]
+    
+    
+    # Add recent conversation context
+    validation_conversation.extend(recent_messages)
+    
+    # Add the response being validated (use fixed version if structure was corrected)
+    validation_conversation.append({"role": "assistant", "content": response_to_validate})
     
     # Filter out None entries
     validation_conversation = [msg for msg in validation_conversation if msg is not None]
@@ -900,6 +1065,8 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
         debug("VALIDATION: *** VALIDATION DEBUG - createNewModule detected ***", category="ai_validation")
         debug(f"VALIDATION: User input that triggered this: {user_input}", category="ai_validation")
         debug("VALIDATION: Last two messages validation AI sees:", category="ai_validation")
+        # Get last two messages from validation conversation
+        last_two_messages = validation_conversation[-2:] if len(validation_conversation) >= 2 else validation_conversation
         for i, msg in enumerate(last_two_messages):
             debug(f"VALIDATION: Message {i+1}: {msg['role']}: {msg['content'][:100]}...", category="ai_validation")
         debug("VALIDATION: *** END VALIDATION DEBUG ***", category="ai_validation")
@@ -946,7 +1113,7 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
     for attempt in range(max_validation_retries):
         validation_result = client.chat.completions.create(
             model=DM_VALIDATION_MODEL, # Use imported model name
-            temperature=TEMPERATURE,
+            temperature=0.1,  # Low temperature for consistent validation
             messages=validation_messages_to_send
         )
         
@@ -965,6 +1132,35 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
             validation_json = parse_json_safely(validation_response)
             is_valid = validation_json.get("valid", False)
             reason = validation_json.get("reason", "No reason provided")
+            
+            # Track validation pairs for quality control
+            try:
+                os.makedirs("debug/quality_control", exist_ok=True)
+                validation_pair = {
+                    "timestamp": datetime.now().isoformat(),
+                    "user_input": user_input,  # What the user originally said
+                    "assistant_response": response_to_validate if attempt == 0 else validation_messages_to_send[-1]["content"],
+                    "structure_validation": {
+                        "needed_fix": fixed_response != primary_response,
+                        "message": structure_message,
+                        "original_response": primary_response if fixed_response != primary_response else None
+                    },
+                    "validation_result": {
+                        "valid": is_valid,
+                        "reason": reason,
+                        "raw_response": validation_response
+                    },
+                    "attempt": attempt + 1,
+                    "model_used": DM_VALIDATION_MODEL
+                }
+                
+                # Append to validation pairs log
+                validation_log_path = "debug/quality_control/validation_pairs.jsonl"
+                with open(validation_log_path, "a", encoding="utf-8") as f:
+                    json.dump(validation_pair, f, ensure_ascii=False)
+                    f.write("\n")
+            except Exception as e:
+                debug(f"Failed to log validation pair: {e}", category="ai_validation")
 
             # Log only failed validations to prompt_validation.json
             if not is_valid:
@@ -981,10 +1177,11 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
                     json.dump(log_entry, log_file)
                     log_file.write("\n")  # Add a newline for better readability
 
-                return reason  # Return the failure reason
+                return (False, reason)  # Return tuple with failure status and reason
             else:
                 debug("SUCCESS: Validation passed successfully", category="ai_validation")
-                return True  # Return True for successful validation
+                # Return the fixed/validated response content
+                return (True, response_to_validate)  # Return tuple with validation status and content
 
         except json.JSONDecodeError:
             debug(f"VALIDATION: Invalid JSON from validation model (Attempt {attempt + 1}/{max_validation_retries})", category="ai_validation")
@@ -993,7 +1190,8 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
 
     # If we've exhausted all retries and still don't have a valid JSON response
     warning("VALIDATION: Validation model consistently produced invalid JSON. Assuming primary response is valid.", category="ai_validation")
-    return True
+    # Return the (potentially fixed) response
+    return (True, response_to_validate)
 
 def load_validation_prompt():
     from model_config import COMPRESSION_ENABLED
@@ -1365,7 +1563,7 @@ def generate_module_summary(conversation_history, party_tracker_data, module_nam
                 
                 # Prepare conversation for summarization
                 conversation_text = ""
-                for msg in meaningful_messages[-20:]:  # Last 20 meaningful messages
+                for msg in meaningful_messages:  # All meaningful messages from this module
                     role = "Player" if msg.get("role") == "user" else "DM"
                     content = msg.get("content", "")
                     conversation_text += f"{role}: {content}\n\n"
@@ -1840,11 +2038,28 @@ def process_ai_response(response, party_tracker_data, location_data, conversatio
 
 def save_conversation_history(history):
     try:
+        # Check if we should compress before saving
+        compressor = IncrementalLocationCompressor()
+        
+        # Check compression conditions (15+ valid pairs at current location)
+        if compressor.should_compress(history):
+            debug("Compression conditions met - applying incremental compression", category="compression")
+            
+            # Apply compression (returns new list if successful)
+            compressed_history = compressor.apply_compression_to_list(history)
+            if compressed_history:
+                history = compressed_history
+                info("Conversation history compressed successfully", category="compression")
+            else:
+                debug("Compression not applied - conditions not fully met", category="compression")
+        
+        # Save the (possibly compressed) history
         safe_json_dump(history, json_file)
     except Exception as e:
         error(f"FAILURE: Failed to save conversation history", exception=e, category="file_operations")
 
 def get_ai_response(conversation_history, validation_retry_count=0):
+    global should_inject_creation_prompt
     status_processing_ai()
     
     # Import action predictor and config
@@ -1888,6 +2103,31 @@ def get_ai_response(conversation_history, validation_retry_count=0):
         else:
             print(f"DEBUG: MODEL ROUTING - Intelligent routing disabled, using FULL MODEL")
     
+    # Track model selection decision for quality control
+    print(f"DEBUG: Logging model selection - model={selected_model}, retry={validation_retry_count}")
+    try:
+        import json  # Ensure json is available in this scope
+        os.makedirs("debug/quality_control", exist_ok=True)
+        model_selection_record = {
+            "timestamp": datetime.now().isoformat(),
+            "user_input": user_input[:200],  # First 200 chars
+            "prediction": prediction if validation_retry_count == 0 and not has_module_creation_prompt else None,
+            "selected_model": selected_model,
+            "routing_reason": prediction.get("reason", "Validation retry or module creation") if validation_retry_count == 0 else f"Validation retry {validation_retry_count}",
+            "validation_retry_count": validation_retry_count,
+            "has_module_creation_prompt": has_module_creation_prompt,
+            "intelligent_routing_enabled": ENABLE_INTELLIGENT_ROUTING
+        }
+        
+        # Append to model selection log
+        model_log_path = "debug/quality_control/model_selection.jsonl"
+        with open(model_log_path, "a", encoding="utf-8") as f:
+            json.dump(model_selection_record, f, ensure_ascii=False)
+            f.write("\n")
+    except Exception as e:
+        print(f"ERROR: Failed to log model selection: {e}")
+        debug(f"Failed to log model selection: {e}", category="ai_routing")
+    
     # Check if compression is enabled and apply if needed
     try:
         from model_config import COMPRESSION_ENABLED
@@ -1903,12 +2143,8 @@ def get_ai_response(conversation_history, validation_retry_count=0):
                 json.dump(conversation_history, f, indent=2, ensure_ascii=False)
             
             # Compress using our working compressor with settings from config
-            # Pass the module creation flag to the compressor if available in this context
-            try:
-                inject_flag = should_inject_creation_prompt
-            except NameError:
-                inject_flag = False
-            compressor = ParallelConversationCompressor(inject_module_creation=inject_flag)
+            # Pass the module creation flag to the compressor (now a global variable)
+            compressor = ParallelConversationCompressor(inject_module_creation=should_inject_creation_prompt)
             messages_to_send = compressor.process_conversation_history(str(temp_file))
             
             # Clean up temp file
@@ -1974,6 +2210,27 @@ def get_ai_response(conversation_history, validation_retry_count=0):
         actual_actions = extract_actual_actions(content)
         # Log prediction accuracy
         log_prediction_accuracy(user_input, prediction, actual_actions)
+        
+        # Track model selection result for quality control
+        try:
+            # Update the model selection record with actual outcome
+            model_result_record = {
+                "timestamp": datetime.now().isoformat(),
+                "user_input": user_input[:200],
+                "selected_model": selected_model,
+                "prediction": prediction,
+                "actual_actions": actual_actions,
+                "prediction_correct": bool(actual_actions) == prediction["requires_actions"],
+                "response_length": len(content)
+            }
+            
+            # Append to model results log
+            results_log_path = "debug/quality_control/model_results.jsonl"
+            with open(results_log_path, "a", encoding="utf-8") as f:
+                json.dump(model_result_record, f, ensure_ascii=False)
+                f.write("\n")
+        except Exception as e:
+            debug(f"Failed to log model result: {e}", category="ai_routing")
     
     # The sanitization line that was here has been removed.
     # We now pass the raw, untouched JSON string to the next function.
@@ -2174,7 +2431,7 @@ def check_all_modules_plot_completion():
     return all_modules_data
 
 def main_game_loop():
-    global needs_conversation_history_update
+    global needs_conversation_history_update, should_inject_creation_prompt
 
     # Ensure debug directories and files exist
     import os
@@ -2186,6 +2443,13 @@ def main_game_loop():
     if not os.path.exists("debug/logs/prompt_validation.json"):
         with open("debug/logs/prompt_validation.json", "w") as f:
             f.write("[]")  # Initialize with empty array
+
+    # Initialize companion memories from journal if needed
+    try:
+        from core.memories.initialize_memories import check_and_initialize_on_startup
+        check_and_initialize_on_startup()
+    except Exception as e:
+        debug(f"Could not initialize memories (non-fatal): {e}", category="startup")
 
     # Check if first-time setup is needed
     try:
@@ -2769,7 +3033,7 @@ def main_game_loop():
 
             # Check ALL modules for plot completion before suggesting module creation
             module_creation_prompt = ""
-            should_inject_creation_prompt = False  # Initialize for later use
+            # should_inject_creation_prompt is now a global variable
             try:
                 # Debug current module detection
                 current_module = party_tracker_data.get('module', '').replace(' ', '_')
@@ -2910,7 +3174,19 @@ def main_game_loop():
         else:
             dm_note = "Dungeon Master Note: Remember to take actions if necessary such as updating the plot, time, character sheets, and location if changes occur."
 
-        user_input_with_note = f"{dm_note} Player: {user_input_text}"
+        # Enhance player input with inventory context
+        # Using 'general' context for main conversation (combat has separate manager)
+        # Note: We pass None for character_data/characters_data as the integration 
+        # function will extract inventory from party_tracker_data
+        user_input_with_note = build_enhanced_dm_note(
+            dm_note,
+            user_input_text,
+            None,  # character_data not available at this scope
+            party_tracker_data,
+            None,  # characters_data not available at this scope
+            in_combat=False  # Always use general context for main conversation
+        )
+        
         conversation_history.append({"role": "user", "content": user_input_with_note})
         save_conversation_history(conversation_history)
 
@@ -2923,7 +3199,22 @@ def main_game_loop():
             ai_response_content = get_ai_response(conversation_history, validation_retry_count=retry_count)
             validation_result = validate_ai_response(ai_response_content, user_input_text, validation_prompt_text, conversation_history, party_tracker_data)
         
-            if validation_result is True:
+            # Unpack the validation result tuple
+            is_valid = False
+            validation_reason = ""
+            if isinstance(validation_result, tuple):
+                is_valid, validated_content = validation_result
+                if is_valid:
+                    # Use the fixed/validated content if auto-fix was applied
+                    ai_response_content = validated_content
+                else:
+                    validation_reason = validated_content  # It's the error message when invalid
+            else:
+                # Handle old-style return (shouldn't happen after our change)
+                is_valid = validation_result is True
+                validation_reason = validation_result if isinstance(validation_result, str) else ""
+            
+            if is_valid:
                 valid_response_received = True
                 debug(f"SUCCESS: Valid response generated on attempt {retry_count + 1}", category="ai_validation")
             
@@ -3005,18 +3296,18 @@ def main_game_loop():
                 conversation_history = load_json_file(json_file) or []
                 # No need to save here, as process_ai_response already handled all persistence.
 
-            elif isinstance(validation_result, str):
-                # (The rest of your validation retry logic remains the same)
-                debug(f"VALIDATION: Validation failed. Reason: {validation_result}", category="ai_validation")
+            elif not is_valid and validation_reason:
+                # Validation failed with a reason
+                debug(f"VALIDATION: Validation failed. Reason: {validation_reason}", category="ai_validation")
                 status_retrying(retry_count + 1, 5)
                 # CRITICAL: Save the failed assistant response so the AI can see what it did wrong
                 if ai_response_content:
                     conversation_history.append({"role": "assistant", "content": ai_response_content})
-                conversation_history.append({"role": "user", "content": f"Error Note: Your previous response failed validation. Reason: {validation_result}. Please adjust your response accordingly."})
+                conversation_history.append({"role": "user", "content": f"Error Note: Your previous response failed validation. Reason: {validation_reason}. Please adjust your response accordingly."})
                 save_conversation_history(conversation_history)
                 retry_count += 1
             else: 
-                warning(f"VALIDATION: Unexpected validation result: {validation_result}. Assuming invalid and retrying.", category="ai_validation")
+                warning(f"VALIDATION: Unexpected validation result: is_valid={is_valid}, reason={validation_reason}. Retrying.", category="ai_validation")
                 retry_count += 1
     
         if not valid_response_received:

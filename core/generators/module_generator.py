@@ -477,6 +477,7 @@ class ModuleGenerator:
     def generate_field(self, field_path: str, schema_info: Dict[str, Any], 
                       context: Dict[str, Any]) -> Any:
         """Generate content for a specific field"""
+        import time
         field_name = field_path.split(".")[-1]
         guide_attr = field_name
         
@@ -504,14 +505,26 @@ If the field expects an array, return just the array.
 If the field expects an object, return just the object.
 """
         
-        response = client.chat.completions.create(
-            model=DM_MAIN_MODEL,
-            temperature=0.7,
-            messages=[
-                {"role": "system", "content": "You are an expert 5e module designer. Return only the requested data in the exact format needed."},
-                {"role": "user", "content": prompt}
-            ]
-        )
+        print(f"DEBUG: [ModuleGenerator] Making API call to {DM_MAIN_MODEL}...")
+        print(f"DEBUG: [ModuleGenerator] Prompt length: {len(prompt)} characters")
+        print(f"INFO: Calling OpenAI API for {field_path}... This may take 10-30 seconds.")
+        start_time = time.time()
+        try:
+            response = client.chat.completions.create(
+                model=DM_MAIN_MODEL,
+                temperature=0.7,
+                messages=[
+                    {"role": "system", "content": "You are an expert 5e module designer. Return only the requested data in the exact format needed."},
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            elapsed = time.time() - start_time
+            print(f"DEBUG: [ModuleGenerator] API call completed successfully in {elapsed:.1f} seconds")
+        except Exception as e:
+            print(f"ERROR: [ModuleGenerator] API call failed: {e}")
+            import traceback
+            print(f"ERROR: [ModuleGenerator] Traceback: {traceback.format_exc()}")
+            raise
         
         content = response.choices[0].message.content.strip()
         
@@ -526,11 +539,14 @@ If the field expects an object, return just the object.
     
     def generate_module(self, initial_concept: str, custom_values: Dict[str, Any] = None, context=None) -> Dict[str, Any]:
         """Generate a complete module from an initial concept"""
+        print(f"DEBUG: [ModuleGenerator] Starting generate_module")
+        print(f"DEBUG: [ModuleGenerator] Initial concept: {initial_concept[:100]}...")
         module_data = custom_values or {}
         
         # Add context validation if provided
         if context:
             module_data["moduleName"] = context.module_name
+            print(f"DEBUG: [ModuleGenerator] Using module name: {context.module_name}")
         
         # Generate fields in order of dependencies
         field_order = [
@@ -549,13 +565,17 @@ If the field expects an object, return just the object.
         # Build context with initial concept
         context = {"initialConcept": initial_concept}
         
-        for field_path in field_order:
+        total_fields = len(field_order)
+        for idx, field_path in enumerate(field_order, 1):
             # Skip if already provided in custom_values
             if self.get_nested_value(module_data, field_path) is not None:
                 continue
             
             # Get schema info for this field
             schema_info = self.get_field_schema(field_path)
+            
+            # Progress feedback
+            print(f"MODULE_GENERATION_PROGRESS: Generating field {idx}/{total_fields}: {field_path}")
             
             # Generate the field
             value = self.generate_field(field_path, schema_info, context)
@@ -566,7 +586,7 @@ If the field expects an object, return just the object.
             # Update context with the new field
             self.set_nested_value(context, field_path, value)
             
-            print(f"DEBUG: [Module Generator] Generated: {field_path}")
+            print(f"DEBUG: [Module Generator] Generated: {field_path} (field {idx}/{total_fields} complete)")
         
         # Get module name for file operations
         module_name = module_data.get("moduleName", "")
@@ -775,47 +795,66 @@ If the field expects an object, return just the object.
     
     def update_area_with_prefix(self, area_data: Dict[str, Any], prefix: str) -> Dict[str, Any]:
         """Update all location IDs in area data to use the specified prefix"""
-        # Update map room IDs
+        import re
+        
+        # Build mapping of old IDs to new IDs
+        id_mapping = {}
+        
+        # First pass: build the mapping for all location IDs
+        if "locations" in area_data:
+            for location in area_data["locations"]:
+                if "locationId" in location:
+                    old_id = location["locationId"]
+                    # Extract the numeric part from IDs like A01, B02, etc.
+                    match = re.match(r'^[A-Z]+(\d+)$', old_id)
+                    if match:
+                        num = match.group(1)
+                        new_id = prefix + num.zfill(2)  # Ensure 2 digits
+                        id_mapping[old_id] = new_id
+        
+        # Second pass: update all location IDs and references
+        if "locations" in area_data:
+            for location in area_data["locations"]:
+                # Update the location ID itself
+                if "locationId" in location and location["locationId"] in id_mapping:
+                    location["locationId"] = id_mapping[location["locationId"]]
+                
+                # Update connectivity references
+                if "connectivity" in location:
+                    location["connectivity"] = [
+                        id_mapping.get(conn, conn) for conn in location["connectivity"]
+                    ]
+        
+        # Update map room IDs if they match location IDs
         if "map" in area_data and "rooms" in area_data["map"]:
             for room in area_data["map"]["rooms"]:
-                if "id" in room and room["id"].startswith("R"):
-                    # Extract the number part and add new prefix
-                    num = room["id"][1:]
-                    new_id = prefix + num
+                if "id" in room and room["id"] in id_mapping:
                     old_id = room["id"]
+                    new_id = id_mapping[old_id]
                     room["id"] = new_id
                     
                     # Update room name if it contains the ID
                     if "name" in room and old_id in room["name"]:
                         room["name"] = room["name"].replace(old_id, new_id)
-                    
-                    # Update connections
-                    if "connections" in room:
-                        room["connections"] = [
-                            prefix + conn[1:] if conn.startswith("R") else conn
-                            for conn in room["connections"]
-                        ]
+                
+                # Update connections
+                if "connections" in room:
+                    room["connections"] = [
+                        id_mapping.get(conn, conn) for conn in room["connections"]
+                    ]
         
         # Update layout grid
         if "map" in area_data and "layout" in area_data["map"]:
             for i, row in enumerate(area_data["map"]["layout"]):
                 for j, cell in enumerate(row):
-                    if cell.startswith("R"):
-                        area_data["map"]["layout"][i][j] = prefix + cell[1:]
+                    if cell in id_mapping:
+                        area_data["map"]["layout"][i][j] = id_mapping[cell]
         
-        # Update location IDs
-        if "locations" in area_data:
-            for location in area_data["locations"]:
-                if "locationId" in location and location["locationId"].startswith("R"):
-                    num = location["locationId"][1:]
-                    location["locationId"] = prefix + num
-                
-                # Update connectivity
-                if "connectivity" in location:
-                    location["connectivity"] = [
-                        prefix + conn[1:] if conn.startswith("R") else conn
-                        for conn in location["connectivity"]
-                    ]
+        # Update areaConnectivityId references (these reference location IDs)
+        if "areaConnectivityId" in area_data:
+            area_data["areaConnectivityId"] = [
+                id_mapping.get(conn_id, conn_id) for conn_id in area_data["areaConnectivityId"]
+            ]
         
         return area_data
     
