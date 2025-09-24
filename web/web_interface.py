@@ -150,6 +150,7 @@ log.setLevel(logging.ERROR)  # Only show errors, not every HTTP request
 game_output_queue = queue.Queue()
 debug_output_queue = queue.Queue()
 user_input_queue = queue.Queue()
+module_progress_queue = queue.Queue()  # Queue for module creation progress
 game_thread = None
 original_stdout = sys.stdout
 original_stderr = sys.stderr
@@ -1946,6 +1947,11 @@ def handle_connect():
     while not debug_output_queue.empty():
         msg = debug_output_queue.get()
         emit('debug_output', msg)
+    
+    # Check for module progress updates
+    while not module_progress_queue.empty():
+        progress_data = module_progress_queue.get()
+        emit('module_creation_progress', progress_data)
 
 @socketio.on('user_input')
 def handle_user_input(data):
@@ -3313,6 +3319,15 @@ def send_output_to_clients():
                 try:
                     msg = debug_output_queue.get()
                     socketio.emit('debug_output', msg)
+                except Exception:
+                    # If queue operation or emit fails, just continue
+                    break
+            
+            # Send module progress updates
+            while not module_progress_queue.empty():
+                try:
+                    progress_data = module_progress_queue.get()
+                    socketio.emit('module_creation_progress', progress_data)
                 except Exception:
                     # If queue operation or emit fails, just continue
                     break

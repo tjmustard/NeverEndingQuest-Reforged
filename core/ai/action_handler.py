@@ -78,6 +78,14 @@ except:
     USAGE_TRACKING_AVAILABLE = False
     def track_response(r): pass
 
+# Import socketio for web interface progress updates
+try:
+    from web.web_interface import socketio
+    SOCKETIO_AVAILABLE = True
+except ImportError:
+    SOCKETIO_AVAILABLE = False
+    socketio = None
+
 # Set script name for logging
 set_script_name("action_handler")
 
@@ -1022,12 +1030,14 @@ Please use a valid location that exists in the current area ({current_area_id}) 
             # Define progress callback to send updates to web interface
             def module_progress_callback(progress_data):
                 """Send module creation progress to web interface"""
+                # Try to use the module progress queue if available (web mode)
                 try:
-                    from web.web_interface import socketio
-                    socketio.emit('module_creation_progress', progress_data)
+                    from web.web_interface import module_progress_queue
+                    module_progress_queue.put(progress_data)
+                    debug(f"MODULE_PROGRESS: Queued for web - Stage {progress_data.get('stage')}/{progress_data.get('total_stages')} - {progress_data.get('message')}", category="module_management")
+                except ImportError:
+                    # Terminal mode - just log progress
                     debug(f"MODULE_PROGRESS: Stage {progress_data.get('stage')}/{progress_data.get('total_stages')} - {progress_data.get('message')}", category="module_management")
-                except Exception as e:
-                    debug(f"Could not emit progress update: {e}", category="module_management")
             
             # Check if this is a single narrative parameter (new format)
             # or multiple parameters (old format)
