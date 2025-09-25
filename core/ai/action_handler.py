@@ -215,8 +215,11 @@ def update_party_npcs(party_tracker_data, operation, npc):
                 return
 
         # Now we can add the NPC to the party
-        # Ensure consistent name formatting in party tracker
-        npc_copy = npc.copy()  # Don't modify the original
+        # Create entry matching the party_schema.json requirements (name and role)
+        npc_entry = {
+            "name": npc.get('name'),
+            "role": npc.get('role', npc.get('class', 'Companion'))  # Use role if provided, else class, else default
+        }
         
         # Load the actual NPC data to get the correct display name
         from utils.encoding_utils import safe_json_load
@@ -235,10 +238,10 @@ def update_party_npcs(party_tracker_data, operation, npc):
             npc_data = safe_json_load(npc_file)
             if npc_data and 'name' in npc_data:
                 # Use the name from the character file for consistency
-                npc_copy['name'] = npc_data['name']
+                npc_entry['name'] = npc_data['name']
                 debug(f"STATE_CHANGE: Using character file name '{npc_data['name']}' for party tracker", category="character_updates")
         
-        party_tracker_data["partyNPCs"].append(npc_copy)
+        party_tracker_data["partyNPCs"].append(npc_entry)
     elif operation == "remove":
         party_tracker_data["partyNPCs"] = [x for x in party_tracker_data["partyNPCs"] if x["name"] != npc["name"]]
 
