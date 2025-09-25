@@ -2557,7 +2557,7 @@ def main_game_loop():
         
     # --- END: COMBAT RESUMPTION LOGIC ---
     else:
-        print("[DEBUG] Normal startup path - will enter main game loop")
+        # print("[DEBUG] Normal startup path - will enter main game loop")
         # Normal game loop (when not resuming from combat)
         # validation_prompt_text and main_system_prompt_text already loaded above for both paths 
 

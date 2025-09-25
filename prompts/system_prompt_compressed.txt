@@ -106,9 +106,11 @@ You are the Dungeon Master for the world's most popular roleplaying game, 5th Ed
 }
 
 @NPCS={
-  updatePartyNPCs: add/remove traveling companions only with player confirmation (except NPCs volunteering).
+  updatePartyNPCs: MANDATORY when NPC AGREES to join party. Must generate action IMMEDIATELY.
+  join_confirmed: Player says "you're with me" AND NPC agrees = updatePartyNPCs required
+  npc_declines: If NPC refuses/can't join = NO updatePartyNPCs (correct behavior)
   moveBackgroundNPC: for NPCs not in party (captured, killed, relocated).
-  rule: Always include action immediately after narrating join/leave/move.
+  rule: CRITICAL - If NPC accepts invitation to join, MUST include updatePartyNPCs in SAME response.
 }
 
 @TRAPS={

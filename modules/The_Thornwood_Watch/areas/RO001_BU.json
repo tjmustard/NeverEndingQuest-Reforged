@@ -128,8 +128,8 @@
         },
         {
           "name": "Rusk",
-          "description": "Captured bandit leader with a broken arm, now terrified of his new master. Once a simple brigand, he speaks in hushed, fearful tones about the sorcerer Malarok who now commands the bandit forces. Through careful interrogation, he can reveal the location of the main bandit camp in the Thornwood Wilds and warn of Malarok's growing magical influence over his followers.",
-          "attitude": "Fearful and broken, eager to cooperate in exchange for protection from Malarok's wrath. Provides vital intelligence about the sorcerer's operations."
+          "description": "Captured bandit leader with a broken arm, sullen and defiant despite his imprisonment. Once a simple brigand, he alternates between bitter silence and angry outbursts, clearly torn between fear of his captors and terror of the sorcerer Malarok who now commands the bandit forces. Only through skilled interrogation, intimidation, or clever bargaining might he reveal the location of the main bandit camp in the Thornwood Wilds and the extent of Malarok's growing magical influence over his followers.",
+          "attitude": "Sullen and resistant, refusing to speak easily. Requires persuasion (DC 13), intimidation (DC 11), or deception (DC 14) to extract information. Even then, reveals details grudgingly and only piece by piece. Deeply fears both torture and Malarok's revenge."
         }
       ],
       "monsters": [],

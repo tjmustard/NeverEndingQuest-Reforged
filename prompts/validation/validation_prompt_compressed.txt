@@ -118,9 +118,10 @@ CRITICAL: Actually PARSE the JSON in the assistant response. Do NOT hallucinate 
 }
 
 @NPC_JOINING={
-  valid: Player asks help -> NPC considers -> updatePartyNPCs if agrees
-  invalid: NPC joins without updatePartyNPCs action
-  factors: personality, authority, circumstances, relationship
+  valid: Player accepts + NPC AGREES -> MUST have updatePartyNPCs in SAME response
+  invalid: NPC agrees to join but NO updatePartyNPCs action = ALWAYS INVALID
+  no_action_needed: NPC declines/refuses/can't join = NO updatePartyNPCs (correct)
+  mandatory: If narration shows NPC accepting and joining, updatePartyNPCs REQUIRED or invalid
 }
 
 @VALIDATION_EXAMPLES={
@@ -155,7 +156,7 @@ CRITICAL: Actually PARSE the JSON in the assistant response. Do NOT hallucinate 
   updateCharacterInfo: {"characterName":str,"changes":str} #SINGLE name only. Multiple chars = multiple actions in array
   updateTime: {"timeEstimate":int} #integer only, not string
   updatePlot: {"plotPointId":str,"newStatus":str,"plotImpact":str}
-  updatePartyNPCs: {"operation":str,"npc":obj} #operation: "add"/"remove"
+  updatePartyNPCs: {"operation":str,"npc":obj} #npc is object: {"name":str,"level":str,"class":str}
   moveBackgroundNPC: {"npcName":str,"context":str,"currentLocation":str}
   levelUp: {"entityName":str,"newLevel":int} #integer only, not string
   establishHub: {"hubName":str,"hubType":str,"description":str,"services":arr,"ownership":str}
