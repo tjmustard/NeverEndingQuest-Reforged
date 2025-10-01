@@ -34,9 +34,13 @@
     }
   },
   "custom": {
-    "anime": {
-      "name": "Anime (Modified)",
-      "prompt": "Anime art style, vibrant colors, cel-shaded, manga-inspired, bold outlines, dynamic pose, expressive features"
+    "photorealistic-horror": {
+      "name": "photorealistic-horror",
+      "prompt": "ultra-realistic, professional photography, detailed textures, eerie dim lighting with deep shadows, high resolution, cinematic horror quality, unsettling atmosphere, gothic undertones, weathered and worn features, pale moonlight, fog-diffused background, haunted expression, muted desaturated colors, film grain texture, psychological horror aesthetic, subtle dread"
+    },
+    "dark_fantasy_realism": {
+      "name": "Dark Fantasy Realism",
+      "prompt": "ultra-realistic, professional photography, detailed textures, dramatic moody lighting with atmospheric shadows, high resolution, cinematic quality, dark fantasy setting, weathered adventuring gear, detailed clothing and equipment, character-appropriate expression and demeanor, muted earthy colors with selective highlights, subtle environmental fog, haunting atmosphere, gritty realism"
     }
   }
 }

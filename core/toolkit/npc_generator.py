@@ -108,7 +108,7 @@ class NPCGenerator:
         # Part 3: Reinforce Composition and Quality
         # A final instruction to ensure a high-quality, single-character result.
         prompt_parts.append(
-            "A dynamic half-body or full-body portrait of a single character. Cinematic composition. Friendly and heroic demeanor."
+            "A dynamic half-body or full-body portrait of a single character. Cinematic composition. Character expression and demeanor should match their personality and situation."
         )
 
         # Part 4: Add Style Modifiers
@@ -275,6 +275,7 @@ class NPCGenerator:
                 "style": style,
                 "elapsed_time": elapsed,
                 "image_url": image_url,
+                "image_object": img if not pack_name else None,  # Return image object for web_interface to save
                 "saved_to": str(portrait_path) if pack_name else None
             }
             

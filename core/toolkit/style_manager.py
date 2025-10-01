@@ -93,42 +93,75 @@ class StyleManager:
         
         return all_styles
     
-    def save_custom_style(self, name: str, prompt: str) -> Dict:
+    def save_custom_style(self, name: str, prompt: str, style_id: str = None) -> Dict:
         """
         Save a new custom style template
-        
+
         Args:
             name: Display name for the style
             prompt: The prompt appendage for this style
-            
+            style_id: Optional existing style_id to update instead of creating new
+
         Returns:
             Result dictionary with success status
         """
-        # Generate style ID from name
-        style_id = name.lower().replace(" ", "_")
-        
+        # If updating existing style, use provided style_id
+        if style_id:
+            # Don't allow overriding builtins through this method
+            if style_id in self.templates.get("builtin", {}):
+                return {
+                    "success": False,
+                    "error": f"Cannot override builtin style. Use overwrite_style() instead."
+                }
+
+            # Update existing custom style
+            if "custom" not in self.templates:
+                self.templates["custom"] = {}
+
+            self.templates["custom"][style_id] = {
+                "name": name,
+                "prompt": prompt
+            }
+
+            self._save_templates()
+
+            return {
+                "success": True,
+                "style_id": style_id,
+                "message": f"Custom style '{name}' updated successfully"
+            }
+
+        # Otherwise create new style with ID from name
+        new_style_id = name.lower().replace(" ", "_")
+
         # Check if already exists
-        if style_id in self.templates.get("builtin", {}):
+        if new_style_id in self.templates.get("builtin", {}):
             return {
                 "success": False,
                 "error": f"Cannot override builtin style '{name}'"
             }
-        
+
+        if new_style_id in self.templates.get("custom", {}):
+            return {
+                "success": False,
+                "error": f"Custom style '{name}' already exists. Use a different name or update the existing one."
+            }
+
         # Add to custom styles
         if "custom" not in self.templates:
             self.templates["custom"] = {}
-        
-        self.templates["custom"][style_id] = {
+
+        self.templates["custom"][new_style_id] = {
             "name": name,
             "prompt": prompt
         }
-        
+
         # Save to file
         self._save_templates()
-        
+
         return {
             "success": True,
-            "style_id": style_id,
+            "style_id": new_style_id,
             "message": f"Custom style '{name}' saved successfully"
         }
     

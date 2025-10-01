@@ -4644,32 +4644,123 @@ def handle_generate_unified_assets(data):
                     # Run async function
                     asyncio.run(generate_monster_descriptions())
                 
-                # Generate NPC descriptions (NPCs typically have descriptions from module generation)
-                for asset in npcs_to_describe:
-                    # NPCs usually have descriptions already, but if needed, generate here
-                    completed += 1
-                    progress = int((completed / total_assets) * 100)
-                    socketio.emit('unified_generation_progress', {
-                        'phase': 'descriptions',
-                        'percent': progress,
-                        'message': f"Processed {asset['name']}..."
-                    })
+                # Generate NPC descriptions
+                if npcs_to_describe:
+                    async def generate_npc_descriptions():
+                        nonlocal completed
+                        for asset in npcs_to_describe:
+                            try:
+                                description_found = False
+                                description_text = ""
+
+                                # First check if description exists in NPC compendium
+                                npc_compendium_path = 'data/bestiary/npc_compendium.json'
+                                if os.path.exists(npc_compendium_path):
+                                    compendium_data = safe_read_json(npc_compendium_path) or {}
+                                    npcs_dict = compendium_data.get('npcs', {})
+                                    if asset['id'] in npcs_dict:
+                                        npc_entry = npcs_dict[asset['id']]
+                                        if npc_entry.get('description'):
+                                            description_found = True
+                                            description_text = npc_entry['description']
+                                            info(f"Using existing description from compendium for {asset['name']}")
+
+                                # If not in compendium, check area files
+                                if not description_found:
+                                    areas_dir = Path(f"modules/{module_name}/areas")
+                                    if areas_dir.exists():
+                                        for area_file in areas_dir.glob("*.json"):
+                                            if area_file.stem.endswith('_BU'):
+                                                continue
+                                            area_data = safe_read_json(str(area_file))
+                                            if area_data and 'locations' in area_data:
+                                                for location in area_data['locations']:
+                                                    if 'npcs' in location:
+                                                        for npc in location['npcs']:
+                                                            if isinstance(npc, dict):
+                                                                npc_name = npc.get('name', '')
+                                                                npc_id = npc_name.lower().replace(' ', '_').replace("'", "")
+                                                                if npc_id == asset['id']:
+                                                                    description_text = npc.get('description', '')
+                                                                    if description_text:
+                                                                        description_found = True
+                                                                        info(f"Using existing description from area file for {asset['name']}")
+                                                                    break
+                                                    if description_found:
+                                                        break
+                                            if description_found:
+                                                break
+
+                                # If still no description, generate new one with AI
+                                if not description_found:
+                                    # Use the NPC builder to generate a description
+                                    from core.generators.npc_builder import NPCBuilder
+                                    npc_builder = NPCBuilder()
+
+                                    # Generate description based on module context
+                                    npc_data = await asyncio.to_thread(
+                                        npc_builder.generate_npc_description,
+                                        asset['name'],
+                                        module_context
+                                    )
+                                    if npc_data:
+                                        description_text = npc_data.get('description', '')
+                                        info(f"Generated new AI description for {asset['name']}")
+
+                                # Save to NPC compendium
+                                if description_text:
+                                    npc_compendium_path = 'data/bestiary/npc_compendium.json'
+                                    compendium_data = safe_read_json(npc_compendium_path) or {}
+
+                                    if 'npcs' not in compendium_data:
+                                        compendium_data['npcs'] = {}
+
+                                    # Add or update the NPC in compendium
+                                    if asset['id'] not in compendium_data['npcs']:
+                                        compendium_data['npcs'][asset['id']] = {}
+
+                                    compendium_data['npcs'][asset['id']]['name'] = asset['name']
+                                    compendium_data['npcs'][asset['id']]['description'] = description_text
+
+                                    safe_write_json(npc_compendium_path, compendium_data)
+                                    info(f"Saved {asset['name']} description to NPC compendium")
+
+                                    completed += 1
+                                    progress = int((completed / total_assets) * 100)
+                                    socketio.emit('unified_generation_progress', {
+                                        'percent': progress,
+                                        'message': f"Generated description for {asset['name']}...",
+                                        'asset_id': asset.get('id'),
+                                        'asset_name': asset.get('name'),
+                                        'status': 'Description Generated'
+                                    })
+                            except Exception as e:
+                                error(f"Failed to generate description for {asset['name']}: {e}")
+                                completed += 1
+
+                    # Run async function
+                    asyncio.run(generate_npc_descriptions())
             
             # Phase 2: Generate images for assets without them (or all if overwrite)
+            generate_images = options.get('generate_images', True)
             overwrite = options.get('overwrite', False)
-            info(f"TOOLKIT: Phase 2 - Image generation. Overwrite: {overwrite}")
+            info(f"TOOLKIT: Phase 2 - Image generation. Generate images: {generate_images}, Overwrite: {overwrite}")
             info(f"TOOLKIT: Assets with images: {[a['name'] for a in assets if a.get('has_image')]}")
             info(f"TOOLKIT: Assets without images: {[a['name'] for a in assets if not a.get('has_image')]}")
-            
-            if overwrite:
-                # If overwrite is enabled, generate for all assets that were selected
-                image_targets = [a for a in assets if options.get('generate_images', True)]
-                info(f"TOOLKIT: Overwrite enabled - will generate for all {len(image_targets)} assets")
+
+            if generate_images:
+                if overwrite:
+                    # If overwrite is enabled, generate for all assets that were selected
+                    image_targets = assets
+                    info(f"TOOLKIT: Overwrite enabled - will generate for all {len(image_targets)} assets")
+                else:
+                    # Otherwise only generate for assets without images
+                    image_targets = [a for a in assets if not a.get('has_image')]
+                    info(f"TOOLKIT: Overwrite disabled - will generate only for {len(image_targets)} assets without images")
             else:
-                # Otherwise only generate for assets without images
-                image_targets = [a for a in assets if not a.get('has_image')]
-                info(f"TOOLKIT: Overwrite disabled - will generate only for {len(image_targets)} assets without images")
-            
+                image_targets = []
+                info(f"TOOLKIT: Image generation disabled by user - skipping")
+
             if image_targets:
                 socketio.emit('unified_generation_progress', {
                     'phase': 'images',
@@ -4684,62 +4775,112 @@ def handle_generate_unified_assets(data):
                 # Generate NPC portraits
                 for asset in npcs_to_image:
                     try:
-                        # Load NPC data to get description
-                        npc_file = Path(f"modules/{module_name}/characters/{asset['id']}.json")
-                        if npc_file.exists():
-                            npc_data = safe_read_json(str(npc_file))
-                            
-                            if npc_data:
-                                description = npc_data.get('description', f"A fantasy NPC named {asset['name']}")
-                                
-                                # Generate portrait using selected style and model
-                                style = options.get('style', 'photorealistic')
-                                model = options.get('model', 'dall-e-3')
-                                result = npc_generator.generate_npc_portrait(
-                                    npc_id=asset['id'],
-                                    npc_name=asset['name'],
-                                    npc_description=description,
-                                    style=style,
-                                    model=model,
-                                    pack_name=None  # We'll save directly to module
-                                )
-                                
-                                if result['success']:
-                                    # Move generated image to module media folder
-                                    from PIL import Image
-                                    import requests
-                                    from io import BytesIO
-                                    
-                                    # Download the generated image
-                                    if result.get('image_url') and result['image_url'] != 'base64_image':
-                                        response = requests.get(result['image_url'])
-                                        img = Image.open(BytesIO(response.content))
-                                        
-                                        # Save original uncompressed PNG to raw_images folder
-                                        raw_dir = Path('raw_images') / 'npcs' / module_name
-                                        raw_dir.mkdir(parents=True, exist_ok=True)
-                                        raw_path = raw_dir / f"{asset['id']}.png"
-                                        img.save(raw_path, 'PNG')
-                                        
-                                        # Save to module media folder
-                                        media_dir = Path(f"modules/{module_name}/media/npcs")
-                                        media_dir.mkdir(parents=True, exist_ok=True)
-                                        
-                                        # Convert to RGB if needed (JPEG doesn't support transparency)
-                                        if img.mode == 'RGBA':
-                                            rgb_img = Image.new('RGB', img.size, (255, 255, 255))
-                                            rgb_img.paste(img, mask=img.split()[3] if len(img.split()) > 3 else None)
-                                            img_to_save = rgb_img
-                                        else:
-                                            img_to_save = img
-                                        
-                                        # Save compressed JPEG (matching monster generator quality)
-                                        img_to_save.save(media_dir / f"{asset['id']}.jpg", 'JPEG', quality=95)
-                                        
-                                        # Create and save thumbnail as JPEG
-                                        thumb = img_to_save.copy()
-                                        thumb.thumbnail((128, 128), Image.Resampling.LANCZOS)
-                                        thumb.save(media_dir / f"{asset['id']}_thumb.jpg", 'JPEG', quality=85)
+                        # Get NPC description - check multiple sources
+                        description = ""
+
+                        # First check NPC compendium
+                        npc_compendium_path = 'data/bestiary/npc_compendium.json'
+                        if os.path.exists(npc_compendium_path):
+                            compendium_data = safe_read_json(npc_compendium_path) or {}
+                            npcs_dict = compendium_data.get('npcs', {})
+                            if asset['id'] in npcs_dict:
+                                description = npcs_dict[asset['id']].get('description', '')
+
+                        # If no description in compendium, check area files
+                        if not description:
+                            areas_dir = Path(f"modules/{module_name}/areas")
+                            if areas_dir.exists():
+                                for area_file in areas_dir.glob("*.json"):
+                                    if area_file.stem.endswith('_BU'):
+                                        continue  # Skip backup files
+                                    area_data = safe_read_json(str(area_file))
+                                    if area_data and 'locations' in area_data:
+                                        for location in area_data['locations']:
+                                            if 'npcs' in location:
+                                                for npc in location['npcs']:
+                                                    if isinstance(npc, dict):
+                                                        npc_name = npc.get('name', '')
+                                                        npc_id = npc_name.lower().replace(' ', '_').replace("'", "")
+                                                        if npc_id == asset['id']:
+                                                            description = npc.get('description', '')
+                                                            break
+                                            if description:
+                                                break
+                                    if description:
+                                        break
+
+                        # If still no description, check character file
+                        if not description:
+                            npc_file = Path(f"modules/{module_name}/characters/{asset['id']}.json")
+                            if npc_file.exists():
+                                npc_data = safe_read_json(str(npc_file))
+                                if npc_data:
+                                    description = npc_data.get('description', '')
+
+                        # Fallback description
+                        if not description:
+                            description = f"A fantasy NPC named {asset['name']}"
+
+                        # Generate portrait using selected style and model
+                        style = options.get('style', 'photorealistic')
+                        model = options.get('model', 'dall-e-3')
+                        result = npc_generator.generate_npc_portrait(
+                            npc_id=asset['id'],
+                            npc_name=asset['name'],
+                            npc_description=description,
+                            style=style,
+                            model=model,
+                            pack_name=None  # We'll save directly to module
+                        )
+
+                        if result['success']:
+                            # Get image from result (either image_object or download from URL)
+                            from PIL import Image
+                            import requests
+                            from io import BytesIO
+
+                            img = None
+
+                            # Try getting image_object first (returned when pack_name=None)
+                            if result.get('image_object'):
+                                img = result['image_object']
+                                info(f"Using image object from NPC generator for {asset['name']}")
+                            # Otherwise download from URL
+                            elif result.get('image_url') and result['image_url'] != 'base64_image':
+                                response = requests.get(result['image_url'])
+                                img = Image.open(BytesIO(response.content))
+                                info(f"Downloaded image from URL for {asset['name']}")
+
+                            if img:
+                                # Save original uncompressed PNG to raw_images folder
+                                raw_dir = Path('raw_images') / 'npcs' / module_name
+                                raw_dir.mkdir(parents=True, exist_ok=True)
+                                raw_path = raw_dir / f"{asset['id']}.png"
+                                img.save(raw_path, 'PNG')
+
+                                # Save to module media folder
+                                media_dir = Path(f"modules/{module_name}/media/npcs")
+                                media_dir.mkdir(parents=True, exist_ok=True)
+
+                                # Convert to RGB if needed (JPEG doesn't support transparency)
+                                if img.mode == 'RGBA':
+                                    rgb_img = Image.new('RGB', img.size, (255, 255, 255))
+                                    rgb_img.paste(img, mask=img.split()[3] if len(img.split()) > 3 else None)
+                                    img_to_save = rgb_img
+                                else:
+                                    img_to_save = img
+
+                                # Save compressed JPEG (matching monster generator quality)
+                                img_to_save.save(media_dir / f"{asset['id']}.jpg", 'JPEG', quality=95)
+
+                                # Create and save thumbnail as JPEG
+                                thumb = img_to_save.copy()
+                                thumb.thumbnail((128, 128), Image.Resampling.LANCZOS)
+                                thumb.save(media_dir / f"{asset['id']}_thumb.jpg", 'JPEG', quality=85)
+
+                                info(f"Saved NPC images for {asset['name']} to {media_dir}")
+                            else:
+                                error(f"No image data available for {asset['name']}")
                         
                         completed += 1
                         progress = int((completed / total_assets) * 100)
