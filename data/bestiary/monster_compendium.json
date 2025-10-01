@@ -101,16 +101,6 @@
       ],
       "source_file": "generate_kling_videos_batch1.py"
     },
-    "beholder": {
-      "name": "Beholder",
-      "type": "aberration",
-      "description": "Floating spherical aberration hovering forward, massive central eye projecting antimagic cone. Ten eyestalks writhe like serpents atop sphere, each different colored eye tracking independently - red, green, blue, yellow rays ready to fire. Massive mouth below central eye opens showing hundreds of needle teeth. The creature rotates slowly, paranoid gaze sweeping area. Chitinous purple hide pulses with veins. Drool drips from maw. Photorealistic detail with smooth consistent motion, multiple independent eye movements, and overwhelming alien paranoia.",
-      "tags": [
-        "swarm",
-        "large"
-      ],
-      "source_file": "generate_kling_videos_batch1.py"
-    },
     "rakshasa": {
       "name": "Rakshasa",
       "type": "beast",

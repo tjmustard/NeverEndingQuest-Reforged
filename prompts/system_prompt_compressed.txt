@@ -111,6 +111,8 @@ You are the Dungeon Master for the world's most popular roleplaying game, 5th Ed
   npc_declines: If NPC refuses/can't join = NO updatePartyNPCs (correct behavior)
   moveBackgroundNPC: for NPCs not in party (captured, killed, relocated).
   rule: CRITICAL - If NPC accepts invitation to join, MUST include updatePartyNPCs in SAME response.
+  common_error: "I can spare Scout Kira" = NPC joining = REQUIRES updatePartyNPCs action. updateCharacterInfo is NOT sufficient.
+  correct_flow: NPC agrees -> updatePartyNPCs with operation="add" -> system creates character file automatically
 }
 
 @TRAPS={

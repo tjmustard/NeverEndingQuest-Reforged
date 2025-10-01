@@ -122,6 +122,9 @@ CRITICAL: Actually PARSE the JSON in the assistant response. Do NOT hallucinate 
   invalid: NPC agrees to join but NO updatePartyNPCs action = ALWAYS INVALID
   no_action_needed: NPC declines/refuses/can't join = NO updatePartyNPCs (correct)
   mandatory: If narration shows NPC accepting and joining, updatePartyNPCs REQUIRED or invalid
+  common_failure: "I can spare Scout Kira" without updatePartyNPCs = INVALID (must add action)
+  wrong_action: Using updateCharacterInfo alone for joining = INVALID (must use updatePartyNPCs)
+  check: Look for phrases like "spare", "join you", "come with you", "volunteers" - all require updatePartyNPCs if NPC agrees
 }
 
 @VALIDATION_EXAMPLES={
@@ -140,6 +143,8 @@ CRITICAL: Actually PARSE the JSON in the assistant response. Do NOT hallucinate 
   false_comma_names: {"valid":false,"reason":"Used 'Bob, Jane' in single updateCharacterInfo. Use separate actions for each character"}
   false_numbered_actions: {"valid":false,"reason":"Used updateCharacterInfo_2, updateCharacterInfo_3. Put multiple actions in actions array instead"}
   false_wrong_action_format: {"valid":false,"reason":"Action formatted as {'updatePlot':{...}} instead of {'action':'updatePlot','parameters':{...}}. All actions need 'action' and 'parameters' keys"}
+  false_missing_party_update: {"valid":false,"reason":"NPC 'Scout Kira' agrees to join ('I can spare Scout Kira') but NO updatePartyNPCs action present. MUST use updatePartyNPCs with operation='add' when NPC joins party. Try again with correct action"}
+  false_wrong_join_action: {"valid":false,"reason":"Used updateCharacterInfo to document NPC joining but missing updatePartyNPCs. When NPC joins party, MUST use updatePartyNPCs action. updateCharacterInfo is for stat/inventory changes, NOT party composition"}
 }
 
 @CORRECT_ACTION_FORMAT={

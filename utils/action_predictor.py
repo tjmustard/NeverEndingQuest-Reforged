@@ -57,7 +57,7 @@ RETURN TRUE if input requires any of these JSON actions:
 - exitGame: ending session
 - storageInteraction: item storage/retrieval
 - updatePartyTracker: module travel
-- updatePartyNPCs: party composition changes
+- updatePartyNPCs: NPCs joining/leaving the party (recruitment requests, asking for help/backup, NPCs volunteering, dismissing companions)
 
 ALWAYS RETURN TRUE for:
 - Questions about plot status ("are all plots resolved?", "what quests remain?")
@@ -80,7 +80,7 @@ KEY PATTERNS:
 
 TRUE INDICATORS:
 - "I pick up/take/grab" → inventory change
-- "I go to/travel to/enter" → location change  
+- "I go to/travel to/enter" → location change
 - "I cast/use/drink" → character update
 - "I attack/fight" → combat encounter
 - "I store/retrieve" → storage action
@@ -92,6 +92,8 @@ TRUE INDICATORS:
 - Story-advancing dialogue that triggers responses → often updates plot
 - Calling out or initiating contact at new locations → often triggers NPC encounters and plot updates
 - Agreement to story directions ("let's do it", "aye") → often commits to plot advancement
+- NPC recruitment requests ("who can you spare?", "can anyone help?", "we need backup", "join us") → party composition changes
+- Responses accepting NPC offers ("yes", "sure", "that would be helpful") when context suggests NPC joining → updatePartyNPCs
 
 CRITICAL PATTERNS TO CATCH:
 - Dice roll outcomes ("natural 20", "I rolled") → Usually leads to updateCharacterInfo/updatePlot
@@ -114,7 +116,7 @@ RESPOND: {"requires_actions": true/false, "reason": "brief explanation"}
 
 Examples:
 - "I pick up the sword" → TRUE (inventory change)
-- "I go to the tavern" → TRUE (location change)  
+- "I go to the tavern" → TRUE (location change)
 - "What's in this room?" → FALSE (asking for description)
 - "I tell the guard about the bandits" → FALSE (pure dialogue)
 - "I take a long rest" → FALSE (simple rest - mini model can handle)
@@ -126,7 +128,10 @@ Examples:
 - "Aye, let's do it" → TRUE (commitment statements often advance plot when in story context)
 - "Not all the main plot points are resolved" → TRUE (plot status query needs full model)
 - "Are all quests complete?" → TRUE (quest/plot status always needs full model)
-- "What plots remain?" → TRUE (plot queries require full model for proper updatePlot handling)"""
+- "What plots remain?" → TRUE (plot queries require full model for proper updatePlot handling)
+- "Who can you spare?" → TRUE (NPC recruitment request requires updatePartyNPCs action)
+- "Can anyone help us?" → TRUE (asking for NPC assistance likely results in party composition change)
+- "Join us, Kira" → TRUE (direct recruitment requires updatePartyNPCs action)"""
 
 def predict_actions_required(user_input):
     """
