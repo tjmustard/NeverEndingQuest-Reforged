@@ -174,7 +174,11 @@
           "name": "Temporary Holding Area",
           "description": "A secured corner of the command post where captured bandit leader Rusk is held under guard. Heavy chains and vigilant rangers ensure the prisoner remains contained while still allowing for interrogation and information gathering."
         }
-      ]
+      ],
+      "areaConnectivity": [],
+      "areaConnectivityId": [],
+      "encounters": [],
+      "adventureSummary": ""
     },
     {
       "locationId": "RO02",
@@ -244,7 +248,9 @@
           "name": "Storage Crates",
           "description": "Weatherproof crates and canvas-wrapped bundles containing essential supplies for the outpost's operations."
         }
-      ]
+      ],
+      "encounters": [],
+      "adventureSummary": ""
     },
     {
       "locationId": "RO03",
@@ -317,7 +323,9 @@
           "name": "Locked Chest",
           "description": "Guarded by Trader Sila, containing merchant valuables and supplies."
         }
-      ]
+      ],
+      "encounters": [],
+      "adventureSummary": ""
     },
     {
       "locationId": "RO04",
@@ -330,12 +338,14 @@
       ],
       "areaConnectivity": [],
       "areaConnectivityId": [],
-      "npcs": [
-      ],
+      "npcs": [],
       "monsters": [
         {
           "name": "Twig Blight",
-          "number": "1d3+1",
+          "quantity": {
+            "min": 2,
+            "max": 4
+          },
           "disposition": "ambush",
           "strategy": "Hidden among debris using False Appearance. Only attack if vines are disturbed without being discovered first via Perception DC 13."
         }
@@ -379,7 +389,9 @@
           "name": "East Tower Bell (SQ001)",
           "description": "One of three silver bell towers in the communication network. This tower was overgrown with magically enhanced thorny vines that have now been cleared by the party, but the bell mechanism still needs restoration to function properly."
         }
-      ]
+      ],
+      "encounters": [],
+      "adventureSummary": ""
     },
     {
       "locationId": "RO05",
@@ -396,7 +408,10 @@
       "monsters": [
         {
           "name": "Wolf",
-          "number": "1d3+1",
+          "quantity": {
+            "min": 2,
+            "max": 4
+          },
           "disposition": "hungry",
           "strategy": "Pack hunters that circle their prey, attacking from multiple angles to bring down isolated targets."
         }
@@ -446,7 +461,9 @@
           "name": "West Tower Bell (SQ001)",
           "description": "One of three silver bell towers in the communication network. The harmonic crystal has been shattered by Malarok's agents, requiring replacement to restore the tower's function."
         }
-      ]
+      ],
+      "encounters": [],
+      "adventureSummary": ""
     },
     {
       "locationId": "RO06",
@@ -467,7 +484,10 @@
       "monsters": [
         {
           "name": "Bandit",
-          "number": "1d3+1",
+          "quantity": {
+            "min": 2,
+            "max": 4
+          },
           "disposition": "watchful",
           "strategy": "Watching the tower for signs of repair attempts. Will attack if discovered or if the party attempts to restore the bell."
         }
@@ -516,7 +536,9 @@
           "name": "Bandit Surveillance Post",
           "description": "Concealed positions among the rocks and brush where bandits maintain watch over the tower and surrounding area."
         }
-      ]
+      ],
+      "encounters": [],
+      "adventureSummary": ""
     }
   ],
   "randomEncounters": [

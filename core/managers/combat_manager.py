@@ -778,7 +778,15 @@ def validate_combat_response(response, encounter_data, user_input, conversation_
                 temperature=0.3,  # Lower temperature for more consistent validation
                 messages=validation_conversation
             )
-            
+
+            # Log API call to master log
+            try:
+                from utils.api_logger import log_api_call
+                log_api_call("combat_validation", validation_conversation, validation_result,
+                            metadata={"temperature": 0.3, "attempt": attempt+1})
+            except Exception as e:
+                print(f"[API_LOG] Warning: Failed to log combat validation call: {e}")
+
             # Track usage with context for telemetry
             if USAGE_TRACKING_AVAILABLE:
                 try:
@@ -1001,7 +1009,15 @@ def summarize_dialogue(conversation_history_param, location_data, party_tracker_
         temperature=TEMPERATURE,
         messages=dialogue_summary_prompt
     )
-    
+
+    # Log API call to master log
+    try:
+        from utils.api_logger import log_api_call
+        log_api_call("combat_summary", dialogue_summary_prompt, response,
+                    metadata={"temperature": TEMPERATURE, "context": "dialogue_summary"})
+    except Exception as e:
+        print(f"[API_LOG] Warning: Failed to log combat summary call: {e}")
+
     # Track usage
     if USAGE_TRACKING_AVAILABLE:
         try:
@@ -2190,6 +2206,14 @@ def run_combat_simulation(encounter_id, party_tracker_data, location_info):
                    model=GPT5_MINI_MODEL,
                    messages=messages_to_send
                )
+
+               # Log API call to master log
+               try:
+                   from utils.api_logger import log_api_call
+                   log_api_call("combat", messages_to_send, response,
+                               metadata={"branch": "gpt5", "context": "re-engage"})
+               except Exception as e:
+                   print(f"[API_LOG] Warning: Failed to log combat call: {e}")
            else:
                # GPT-4.1: Use temperature
                temperature_used = get_combat_temperature(encounter_data, validation_attempt=0)
@@ -2208,7 +2232,15 @@ def run_combat_simulation(encounter_id, party_tracker_data, location_info):
                    temperature=temperature_used,
                    messages=messages_to_send
                )
-           
+
+               # Log API call to master log
+               try:
+                   from utils.api_logger import log_api_call
+                   log_api_call("combat", messages_to_send, response,
+                               metadata={"temperature": temperature_used, "branch": "gpt4.1", "context": "re-engage"})
+               except Exception as e:
+                   print(f"[API_LOG] Warning: Failed to log combat call: {e}")
+
            # Track usage if available
            if USAGE_TRACKING_AVAILABLE:
                try:

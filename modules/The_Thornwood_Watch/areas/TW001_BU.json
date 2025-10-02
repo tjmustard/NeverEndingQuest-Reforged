@@ -175,10 +175,11 @@
       "traps": [
         {
           "name": "Concealed Rope Snare",
-          "description": "A hidden rope trap designed to catch pursuing rangers by the ankle.",
+          "description": "A hidden rope trap designed to catch pursuing rangers by the ankle. Restrains target, requires DC 15 Athletics or Acrobatics to escape.",
           "detectDC": 14,
           "disableDC": 12,
-          "effect": "Restrains target, requires DC 15 Athletics or Acrobatics to escape"
+          "triggerDC": 14,
+          "damage": "1d4 bludgeoning"
         }
       ],
       "dcChecks": [
@@ -217,13 +218,19 @@
       "monsters": [
         {
           "name": "Whispering Ashling",
-          "number": "1d3+1",
+          "quantity": {
+            "min": 2,
+            "max": 4
+          },
           "disposition": "hostile",
           "strategy": "These corrupted spirits whisper dark magic, attempting to confuse and weaken their victims."
         },
         {
           "name": "Ashbound Bandit",
-          "number": "1",
+          "quantity": {
+            "min": 1,
+            "max": 1
+          },
           "disposition": "mad",
           "strategy": "A single bandit driven insane by ritual experiments, attacking wildly while muttering about dark visions."
         }
@@ -308,7 +315,15 @@
         }
       ],
       "monsters": [
-        "1 Tainted Naiad (appears after Maelo's ritual, can be freed with Remove Curse/Lesser Restoration or DC 15 Persuasion + offering purified water)"
+        {
+          "name": "Tainted Naiad",
+          "quantity": {
+            "min": 1,
+            "max": 1
+          },
+          "disposition": "corrupted but redeemable",
+          "strategy": "Appears after Maelo's ritual, can be freed with Remove Curse/Lesser Restoration or DC 15 Persuasion + offering purified water"
+        }
       ],
       "lootTable": [
         "Herbal healing potion brewed by the hermit",
@@ -373,19 +388,28 @@
       "monsters": [
         {
           "name": "Bandit Sentry",
-          "number": "1d3+1",
+          "quantity": {
+            "min": 2,
+            "max": 4
+          },
           "disposition": "alert",
           "strategy": "Posted at key positions, these sentries will raise an alarm if they spot intruders."
         },
         {
           "name": "Bandit Warrior",
-          "number": "1d3+1",
+          "quantity": {
+            "min": 2,
+            "max": 4
+          },
           "disposition": "aggressive",
           "strategy": "Well-armed bandits who fight with coordination, using tactics learned from their captain."
         },
         {
           "name": "Bandit Captain Gorvek",
-          "number": "1",
+          "quantity": {
+            "min": 1,
+            "max": 1
+          },
           "disposition": "commanding",
           "strategy": "A veteran fighter who directs his men in battle while wielding magical weapons provided by Malarok."
         }
@@ -419,10 +443,11 @@
       "traps": [
         {
           "name": "Concealed Pit Trap",
-          "description": "A camouflaged pit filled with sharpened stakes, positioned to catch attackers approaching the main gate.",
+          "description": "A camouflaged pit filled with sharpened stakes, positioned to catch attackers approaching the main gate. Causes prone condition, DC 13 Dexterity saving throw for half damage.",
           "detectDC": 15,
           "disableDC": 13,
-          "effect": "2d6 piercing damage and prone condition, DC 13 Dexterity saving throw for half damage"
+          "triggerDC": 15,
+          "damage": "2d6 piercing"
         }
       ],
       "dcChecks": [
@@ -479,7 +504,10 @@
       "monsters": [
         {
           "name": "Corrupted Wolf",
-          "number": "1d3+1",
+          "quantity": {
+            "min": 2,
+            "max": 4
+          },
           "disposition": "hostile",
           "strategy": "These wolves have been twisted by dark magic, their eyes glowing with unnatural hunger. They attack with supernatural coordination."
         }

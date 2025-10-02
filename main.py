@@ -317,7 +317,15 @@ def generate_arrival_narration(departure_narration, party_tracker_data, conversa
             temperature=TEMPERATURE,
             messages=narration_request_messages
         )
-        
+
+        # Log API call to master log
+        try:
+            from utils.api_logger import log_api_call
+            log_api_call("narration_generator", narration_request_messages, response,
+                        metadata={"temperature": TEMPERATURE, "context": "module_transition_arrival"})
+        except Exception as e:
+            print(f"[API_LOG] Warning: Failed to log narration call: {e}")
+
         # Track token usage with context for telemetry
         if USAGE_TRACKING_AVAILABLE:
             try:
@@ -389,7 +397,17 @@ Now, provide the rewritten, seamless narration.
                 {"role": "user", "content": stitching_prompt}
             ]
         )
-        
+
+        # Log API call to master log
+        try:
+            from utils.api_logger import log_api_call
+            log_api_call("narrative_stitcher", [
+                {"role": "system", "content": "You are a master storyteller and editor, skilled at weaving separate narrative fragments into a single, seamless, and immersive piece of prose."},
+                {"role": "user", "content": stitching_prompt}
+            ], response, metadata={"temperature": TEMPERATURE, "context": "module_transition_stitch"})
+        except Exception as e:
+            print(f"[API_LOG] Warning: Failed to log stitcher call: {e}")
+
         # Track token usage with context for telemetry
         if USAGE_TRACKING_AVAILABLE:
             try:
@@ -733,6 +751,79 @@ CRITICAL: If validation fails due to wrong NPC for location, provide specific co
         # print(f"DEBUG: Traceback: {traceback.format_exc()}")
         return f"MODULE VALIDATION DATA: Error loading module data - {str(e)}"
 
+def normalize_character_names_in_response(response_text, party_tracker_data):
+    """
+    Normalize NPC names in updateCharacterInfo actions before validation.
+    Handles name variations like "Kira" → "Scout Kira", "Ranger Kira" → "Scout Kira"
+
+    Returns:
+        (normalized_response, message) or (None, error_message) if unresolvable
+    """
+    from utils.npc_name_normalizer import normalize_npc_name_for_action
+
+    try:
+        parsed = json.loads(response_text)
+    except json.JSONDecodeError:
+        # If it's not valid JSON, skip normalization
+        return response_text, "JSON invalid - skipping NPC normalization"
+
+    if 'actions' not in parsed or not isinstance(parsed['actions'], list):
+        # No actions to normalize
+        return response_text, "No actions to normalize"
+
+    corrections = []
+    rejections = []
+
+    for i, action in enumerate(parsed['actions']):
+        if not isinstance(action, dict):
+            continue
+
+        action_type = action.get('action')
+
+        # Only normalize updateCharacterInfo actions
+        if action_type == 'updateCharacterInfo':
+            params = action.get('parameters', {})
+            original_name = params.get('characterName')
+
+            if original_name:
+                print(f"[NPC_NORM] Checking updateCharacterInfo action with characterName='{original_name}'")
+
+                # Try to normalize the name
+                normalized_name, match_type = normalize_npc_name_for_action(
+                    original_name, party_tracker_data, debug_print=True
+                )
+
+                if normalized_name is None:
+                    # Could not resolve name - reject
+                    rejections.append(f"Action {i+1}: '{original_name}' not in party tracker")
+                    print(f"[NPC_NORM] REJECT: '{original_name}' cannot be matched to party tracker")
+
+                elif normalized_name != original_name:
+                    # Name was normalized
+                    params['characterName'] = normalized_name
+                    corrections.append(f"Action {i+1}: '{original_name}' → '{normalized_name}'")
+                    print(f"[NPC_NORM] CORRECTED: '{original_name}' → '{normalized_name}'")
+
+                else:
+                    # Name was already correct
+                    print(f"[NPC_NORM] OK: '{original_name}' matches party tracker")
+
+    # If any rejections, return error
+    if rejections:
+        error_msg = "NPC names not in party tracker: " + "; ".join(rejections)
+        error_msg += f". Valid party NPCs: {[npc.get('name') for npc in party_tracker_data.get('partyNPCs', [])]}"
+        error_msg += f". Valid party members: {party_tracker_data.get('partyMembers', [])}"
+        return None, error_msg
+
+    # If corrections were made, return updated response
+    if corrections:
+        corrected_response = json.dumps(parsed, ensure_ascii=True, indent=2)
+        message = "Auto-corrected NPC names: " + "; ".join(corrections)
+        return corrected_response, message
+
+    # No changes needed
+    return response_text, "All NPC names valid"
+
 def validate_json_structure(response_text):
     """
     Pre-validate JSON structure before sending to AI validator.
@@ -816,10 +907,24 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
     
     # Use fixed response if structure was auto-corrected
     response_to_validate = fixed_response if fixed_response != primary_response else primary_response
-    
+
     if fixed_response != primary_response:
         print(f"INFO: Auto-fixed JSON structure - {structure_message}")
-    
+
+    # Pre-validate and normalize NPC names in updateCharacterInfo actions
+    npc_normalized_response, npc_normalization_message = normalize_character_names_in_response(
+        response_to_validate, party_tracker_data
+    )
+
+    if npc_normalized_response is None:
+        # Name normalization failed - unresolvable NPC name
+        print(f"ERROR: NPC name validation failed - {npc_normalization_message}")
+        return (False, f"NPC name error: {npc_normalization_message}")
+
+    if npc_normalized_response != response_to_validate:
+        print(f"INFO: Auto-corrected NPC names - {npc_normalization_message}")
+        response_to_validate = npc_normalized_response
+
     # The validation needs sufficient context to understand what happened
     # We need to include recent conversation history, not just the last two messages
     # This helps the validator understand ongoing narratives like ritual completions
@@ -1116,7 +1221,15 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
             temperature=0.1,  # Low temperature for consistent validation
             messages=validation_messages_to_send
         )
-        
+
+        # Log API call to master log
+        try:
+            from utils.api_logger import log_api_call
+            log_api_call("validation", validation_messages_to_send, validation_result,
+                        metadata={"attempt": attempt+1, "max_retries": max_validation_retries})
+        except Exception as e:
+            print(f"[API_LOG] Warning: Failed to log validation call: {e}")
+
         # Track token usage with context for telemetry
         if USAGE_TRACKING_AVAILABLE:
             try:
@@ -1597,7 +1710,17 @@ Write a compelling chronicle of these actual events:"""
                     ],
                     temperature=0.7
                 )
-                
+
+                # Log API call to master log
+                try:
+                    from utils.api_logger import log_api_call
+                    log_api_call("module_summary", [
+                        {"role": "system", "content": "You are an expert at creating beautiful adventure chronicles from 5th edition gameplay, focusing only on events that actually occurred."},
+                        {"role": "user", "content": summary_prompt}
+                    ], response, metadata={"temperature": 0.7, "module": module_name})
+                except Exception as e:
+                    print(f"[API_LOG] Warning: Failed to log summary call: {e}")
+
                 # Track token usage with context for telemetry
                 if USAGE_TRACKING_AVAILABLE:
                     try:
@@ -2179,7 +2302,15 @@ def get_ai_response(conversation_history, validation_retry_count=0):
             model=selected_model,
             messages=messages_to_send  # Use potentially compressed messages
         )
-        
+
+        # Log API call to master log
+        try:
+            from utils.api_logger import log_api_call
+            log_api_call("main_dm", messages_to_send, response,
+                        metadata={"retry_count": validation_retry_count, "branch": "gpt5"})
+        except Exception as e:
+            print(f"[API_LOG] Warning: Failed to log main DM call: {e}")
+
         # Track token usage
         if USAGE_TRACKING_AVAILABLE:
             try:
@@ -2194,7 +2325,15 @@ def get_ai_response(conversation_history, validation_retry_count=0):
             temperature=TEMPERATURE,
             messages=messages_to_send  # Use potentially compressed messages
         )
-        
+
+        # Log API call to master log
+        try:
+            from utils.api_logger import log_api_call
+            log_api_call("main_dm", messages_to_send, response,
+                        metadata={"temperature": TEMPERATURE, "retry_count": validation_retry_count, "branch": "gpt4.1"})
+        except Exception as e:
+            print(f"[API_LOG] Warning: Failed to log main DM call: {e}")
+
         # Track token usage with context for telemetry
         if USAGE_TRACKING_AVAILABLE:
             try:

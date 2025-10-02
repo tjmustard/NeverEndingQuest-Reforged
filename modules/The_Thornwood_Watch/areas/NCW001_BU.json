@@ -97,23 +97,23 @@
       "areaConnectivityId": [
         "TW05"
       ],
-      "npcs": [
-        {
-          "name": "Corrupted Cave Fisher",
-          "description": "Once a normal cave fisher, this creature has been twisted by Malarok's Voidstone magic into something far more sinister. Its chitinous shell now bears veins of pulsing dark energy, and its fishing line drips with the sorcerer's corruption that can weaken both flesh and spirit.",
-          "attitude": "Hostile and territorial, it will attack anything that enters its domain, driven by Malarok's corrupting influence."
-        }
-      ],
+      "npcs": [],
       "monsters": [
         {
           "name": "Corrupted Cave Fisher",
-          "number": "1",
+          "quantity": {
+            "min": 1,
+            "max": 1
+          },
           "disposition": "predatory",
           "strategy": "A CR 1 cave fisher enhanced with necrotic damage, this corrupted creature uses its web to trap prey from above."
         },
         {
           "name": "Tainted Stirge",
-          "number": "1d3+1",
+          "quantity": {
+            "min": 2,
+            "max": 4
+          },
           "disposition": "bloodthirsty",
           "strategy": "CR 1/8 stirges that carry disease from feeding on corrupted creatures, swarming victims in groups."
         }
@@ -134,10 +134,11 @@
       "traps": [
         {
           "name": "Corrupted Spore Cloud",
-          "description": "Disturbing the tainted fungi releases a cloud of corrupting spores that sap strength and vitality.",
+          "description": "Disturbing the tainted fungi releases a cloud of corrupting spores that sap strength and vitality. DC 14 Constitution save or have maximum hit points reduced by the damage taken.",
           "detectDC": 16,
           "disableDC": 14,
-          "effect": "DC 14 Constitution save or take 1d4 necrotic damage and have maximum hit points reduced by the damage taken"
+          "triggerDC": 16,
+          "damage": "1d4 necrotic"
         }
       ],
       "dcChecks": [
@@ -187,19 +188,28 @@
       "monsters": [
         {
           "name": "Twig Blight",
-          "number": "1d3+1",
+          "quantity": {
+            "min": 2,
+            "max": 4
+          },
           "disposition": "aggressive",
           "strategy": "CR 1/8 plant creatures enhanced with necrotic thorns, attacking in groups and slashing with corrupted claws."
         },
         {
           "name": "Awakened Shrub",
-          "number": "1",
+          "quantity": {
+            "min": 1,
+            "max": 1
+          },
           "disposition": "hostile",
           "strategy": "A CR 0 shrub corrupted by dark magic, attacking anything that disturbs the grove."
         },
         {
           "name": "Corrupted Wolf",
-          "number": "1d3+1",
+          "quantity": {
+            "min": 2,
+            "max": 4
+          },
           "disposition": "protective",
           "strategy": "CR 1/4 wolves that only appear if Sylara becomes hostile, defending her with supernatural ferocity."
         }
@@ -221,10 +231,11 @@
       "traps": [
         {
           "name": "Animated Thorn Barriers",
-          "description": "Massive briars that lash out at intruders, animated by the corruption flowing through the grove.",
+          "description": "Massive briars that lash out at intruders, animated by the corruption flowing through the grove. DC 13 Constitution save or be poisoned for 1 hour.",
           "detectDC": 14,
           "disableDC": 16,
-          "effect": "2d6 piercing damage plus DC 13 Constitution save or be poisoned for 1 hour"
+          "triggerDC": 14,
+          "damage": "2d6 piercing"
         }
       ],
       "dcChecks": [
@@ -278,13 +289,19 @@
       "monsters": [
         {
           "name": "Shadow Corrupted Wolf",
-          "number": "1d3+1",
+          "quantity": {
+            "min": 2,
+            "max": 4
+          },
           "disposition": "defensive",
           "strategy": "CR 1/2 wolves enhanced with shadow magic, only attacking if the Hart is threatened and moving with unnatural silence."
         },
         {
           "name": "Corrupted Owlbear",
-          "number": "1",
+          "quantity": {
+            "min": 1,
+            "max": 1
+          },
           "disposition": "berserk",
           "strategy": "A CR 3 owlbear driven mad by corruption, attacking everything it sees with terrifying fury."
         }
@@ -354,13 +371,19 @@
       "monsters": [
         {
           "name": "Corrupted Ranger Thane",
-          "number": "1",
+          "quantity": {
+            "min": 1,
+            "max": 1
+          },
           "disposition": "tormented",
           "strategy": "A CR 2 veteran ranger with necrotic abilities, fighting with corrupted tactics while occasionally warning his foes in moments of lucidity."
         },
         {
           "name": "Corrupted Wolf",
-          "number": "1",
+          "quantity": {
+            "min": 1,
+            "max": 1
+          },
           "disposition": "savage",
           "strategy": "Thane's former animal companion (CR 1/4), now twisted by corruption and attacking with feral rage."
         }
@@ -382,10 +405,11 @@
       "traps": [
         {
           "name": "Corrupted Campfire",
-          "description": "The cold ashes burst into unnatural flames when disturbed, spreading corrupting energy.",
+          "description": "The cold ashes burst into unnatural flames when disturbed, spreading corrupting energy in a 10-foot radius. DC 14 Wisdom save or be frightened for 1 minute.",
           "detectDC": 13,
           "disableDC": 15,
-          "effect": "2d4 necrotic damage in 10-foot radius, DC 14 Wisdom save or be frightened for 1 minute"
+          "triggerDC": 13,
+          "damage": "2d4 necrotic"
         }
       ],
       "dcChecks": [
@@ -439,19 +463,28 @@
       "monsters": [
         {
           "name": "Malarok the Corruptor",
-          "number": "1",
+          "quantity": {
+            "min": 1,
+            "max": 1
+          },
           "disposition": "megalomaniacal",
           "strategy": "A CR 3 human sorcerer enhanced by Voidstone power, casting dark spells while monologuing about his superiority."
         },
         {
           "name": "Elite Bandit Bodyguard",
-          "number": "1d3+1",
+          "quantity": {
+            "min": 2,
+            "max": 4
+          },
           "disposition": "fanatical",
           "strategy": "CR 1 bandits enhanced by Malarok's magic, fighting with unnatural coordination to protect their master."
         },
         {
           "name": "Corrupted Wolf",
-          "number": "1d3+1",
+          "quantity": {
+            "min": 2,
+            "max": 4
+          },
           "disposition": "vicious",
           "strategy": "CR 1/2 wolves twisted by the sorcerer's power, their eyes glowing with void energy as they savage intruders."
         }
@@ -473,17 +506,19 @@
       "traps": [
         {
           "name": "Void Energy Discharge",
-          "description": "The meteorite periodically releases waves of corrupting energy that affect the entire hilltop.",
+          "description": "The meteorite periodically releases waves of corrupting energy that affect the entire hilltop within 60 feet. DC 15 Constitution save for half damage.",
           "detectDC": 17,
           "disableDC": 18,
-          "effect": "3d6 necrotic damage to all creatures within 60 feet, DC 15 Constitution save for half damage"
+          "triggerDC": 17,
+          "damage": "3d6 necrotic"
         },
         {
           "name": "Reality Distortion Field",
-          "description": "The alien presence warps reality around the meteorite, creating dangerous spatial anomalies.",
+          "description": "The alien presence warps reality around the meteorite, creating dangerous spatial anomalies. Teleports creature to random location within 30 feet, DC 14 Wisdom save to resist.",
           "detectDC": 15,
           "disableDC": 16,
-          "effect": "Teleports creature to random location within 30 feet, DC 14 Wisdom save to resist"
+          "triggerDC": 15,
+          "damage": "0 psychic"
         }
       ],
       "dcChecks": [
