@@ -160,18 +160,18 @@ if not exist "config.py" (
         echo Opening API key entry dialog...
         echo.
 
-        REM Use PowerShell to show input dialog
-        for /f "delims=" %%i in ('powershell -Command "$key = [Microsoft.VisualBasic.Interaction]::InputBox('Enter your OpenAI API key (starts with sk-):' + [Environment]::NewLine + [Environment]::NewLine + 'Get your key at: https://platform.openai.com/api-keys' + [Environment]::NewLine + [Environment]::NewLine + 'Leave blank to skip and add manually later.', 'NeverEndingQuest - API Key Setup'); if ($key) { $key } else { 'SKIP' }"') do set API_KEY=%%i
+        REM Use PowerShell to show input dialog with proper assembly loading
+        for /f "usebackq delims=" %%i in (`powershell -NoProfile -Command "Add-Type -AssemblyName Microsoft.VisualBasic; $key = [Microsoft.VisualBasic.Interaction]::InputBox('Enter your OpenAI API key (starts with sk-):\n\nGet your key at: https://platform.openai.com/api-keys\n\nLeave blank to skip and add manually later.', 'NeverEndingQuest - API Key Setup', ''); if ($key) { Write-Output $key } else { Write-Output 'SKIP_BLANK' }"`) do set API_KEY=%%i
 
-        if "!API_KEY!"=="SKIP" (
+        if "!API_KEY!"=="SKIP_BLANK" (
             echo [SKIPPED] You can add your API key later by editing config.py
             timeout /t 2 >nul
         ) else if "!API_KEY!"=="" (
-            echo [SKIPPED] No key entered. You can add it later by editing config.py
+            echo [SKIPPED] Dialog was cancelled. You can add the key later by editing config.py
             timeout /t 2 >nul
         ) else (
             REM Replace the API key in config.py
-            powershell -Command "(Get-Content config.py) -replace 'your-api-key-here', '!API_KEY!' | Set-Content config.py"
+            powershell -NoProfile -Command "(Get-Content config.py) -replace 'your-api-key-here', '!API_KEY!' | Set-Content config.py"
             echo [OK] API key added to config.py successfully!
             timeout /t 2 >nul
         )
@@ -197,7 +197,7 @@ REM Create desktop shortcut
 set SCRIPT_DIR=%CD%
 set SHORTCUT_TARGET=%USERPROFILE%\Desktop\NeverEndingQuest.lnk
 
-powershell -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%SHORTCUT_TARGET%'); $s.TargetPath = '%SCRIPT_DIR%\launch_game.bat'; $s.WorkingDirectory = '%SCRIPT_DIR%'; $s.IconLocation = '%SCRIPT_DIR%\web\static\favicon.ico'; $s.Description = 'Launch NeverEndingQuest AI Dungeon Master'; $s.Save()" >nul 2>&1
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%SHORTCUT_TARGET%'); $s.TargetPath = '%SCRIPT_DIR%\launch_game.bat'; $s.WorkingDirectory = '%SCRIPT_DIR%'; $s.Description = 'Launch NeverEndingQuest AI Dungeon Master'; $s.Save()" 2>nul
 
 if exist "%USERPROFILE%\Desktop\NeverEndingQuest.lnk" (
     echo [OK] Desktop shortcut created!
