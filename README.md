@@ -28,6 +28,31 @@ An AI-powered Dungeon Master for running SRD 5.2.1 compatible tabletop RPG campa
 
 ## Quick Start
 
+### 🎯 One-Click Windows Installer (Recommended)
+
+**For non-technical users on Windows:**
+
+1. **Download the installer**: [install_neverendingquest_windows.bat](https://raw.githubusercontent.com/MoonlightByte/NeverEndingQuest/main/install_neverendingquest_windows.bat) (Right-click → Save As)
+2. **Run the installer**: Double-click the `.bat` file
+3. **Add your OpenAI API key**: The installer will open `config.py` for you to add your API key
+4. **Launch from Desktop**: Double-click the "NeverEndingQuest" shortcut created on your desktop
+
+The installer automatically:
+- ✅ Checks for Python and Git (installs Git if missing)
+- ✅ Clones the repository
+- ✅ Creates a virtual environment
+- ✅ Installs all dependencies
+- ✅ Sets up configuration files
+- ✅ Creates desktop shortcut and launch scripts
+
+**To restart the game later:**
+- Use the desktop shortcut, or
+- Run `launch_game.bat` in the installation folder
+
+---
+
+### 🛠️ Manual Installation
+
 **Get playing in under 5 minutes!** The AI startup wizard handles everything automatically:
 
 1. **Install dependencies**: `pip install -r requirements.txt`
