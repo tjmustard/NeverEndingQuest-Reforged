@@ -5051,19 +5051,35 @@ def handle_trigger_update():
     emit('update_log', {'message': 'Starting auto-update...'})
 
     try:
-        repo_path = os.getcwd()
+        # Get the WSL path
+        wsl_path = os.getcwd()
+
+        # Convert WSL path to Windows path for Git (which expects Windows format)
+        # This fixes the "dubious ownership" error in WSL environments
+        try:
+            wslpath_result = subprocess.run(
+                ['wslpath', '-w', wsl_path],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            windows_path = wslpath_result.stdout.strip()
+        except Exception as e:
+            # Fallback to WSL path if wslpath fails (non-WSL environments)
+            windows_path = wsl_path
+            emit('update_log', {'message': f'Warning: Path conversion failed, using WSL path: {e}'})
 
         # Step 1: Git pull with safe.directory config applied directly
         emit('update_log', {'message': 'Pulling latest code from GitHub...'})
 
         # Use -c flag to pass safe.directory config directly to git pull command
-        # This avoids relying on .gitconfig files which may not persist between subprocess calls
+        # Pass Windows-formatted path for WSL Git to properly validate ownership
         result = subprocess.run(
-            ["git", "-c", f"safe.directory={repo_path}", "pull"],
+            ["git", "-c", f"safe.directory={windows_path}", "pull"],
             capture_output=True,
             text=True,
             timeout=30,
-            cwd=repo_path
+            cwd=wsl_path
         )
 
         if result.returncode != 0:
