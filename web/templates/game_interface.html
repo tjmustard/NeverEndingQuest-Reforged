@@ -45,6 +45,17 @@
             filter: drop-shadow(0 0 15px rgba(80, 200, 120, 0.5));
             text-shadow: none;
         }
+
+        .header h1 small {
+            font-size: 0.35em;
+            opacity: 0.8;
+            color: #888;
+            -webkit-text-fill-color: #888;
+            font-family: 'Courier New', monospace;
+            font-weight: normal;
+            letter-spacing: 0.5px;
+            margin-left: 8px;
+        }
         
         @keyframes shimmerEmerald {
             0% { background-position: 0% 50%; }
@@ -4049,7 +4060,7 @@
     </div>
     
     <div class="header">
-        <h1>Never<span>Ending</span>Quest</h1>
+        <h1>Never<span>Ending</span>Quest <small style="font-size: 0.4em; opacity: 0.7;" id="version-display">v{{ version }}</small></h1>
         <div class="location-info" id="location-info">
             <div class="location-name" id="location-name">Loading location...</div>
             <div class="location-details" id="location-details"></div>

@@ -494,7 +494,14 @@ class WebInput:
 @app.route('/')
 def index():
     """Serve the main game interface"""
-    return render_template('game_interface.html')
+    # Read version from VERSION file
+    try:
+        with open('VERSION', 'r') as f:
+            version = f.read().strip()
+    except:
+        version = "0.3.0"
+
+    return render_template('game_interface.html', version=version)
 
 @app.route('/static/media/videos/<path:filename>')
 def serve_video(filename):

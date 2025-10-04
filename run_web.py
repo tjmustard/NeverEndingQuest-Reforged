@@ -129,4 +129,27 @@ def main():
             sys.exit(1)
 
 if __name__ == "__main__":
+    # Check for updates before starting
+    try:
+        from utils.version_checker import check_for_updates
+        status, local_ver, remote_ver, message = check_for_updates(silent=True)
+
+        print(f"\nNeverEndingQuest v{local_ver}")
+
+        if status == 'update_available':
+            print(f"\n{'='*60}")
+            print(f"  UPDATE AVAILABLE: v{local_ver} → v{remote_ver}")
+            print(f"{'='*60}")
+            print("\nA new version is available!")
+            print("\nTo update:")
+            print("  1. Close the game")
+            print("  2. Run: git pull")
+            print("  3. Run: pip install -r requirements.txt (or venv\\Scripts\\activate then pip install)")
+            print("  4. Restart the game")
+            print()
+            input("Press Enter to continue with current version...")
+
+    except Exception as e:
+        print(f"[VERSION_CHECK] Could not check for updates: {e}")
+
     main()
