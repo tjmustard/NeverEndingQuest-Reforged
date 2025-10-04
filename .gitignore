@@ -273,6 +273,7 @@ feature_discovery_tests.py
 fix_character_validator_routing.md
 gemini.txt
 gemini_tool.py
+gpt5_tool.py
 google_api.pi
 load_game_dialog_improvements.md
 migrate_to_unified_file_structure.py
