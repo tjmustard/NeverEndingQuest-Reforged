@@ -5051,6 +5051,14 @@ def handle_trigger_update():
     emit('update_log', {'message': 'Starting auto-update...'})
 
     try:
+        # Step 0: Configure Git safe directory (for WSL ownership issues)
+        repo_path = os.getcwd()
+        subprocess.run(
+            ["git", "config", "--global", "--add", "safe.directory", repo_path],
+            capture_output=True,
+            timeout=5
+        )
+
         # Step 1: Git pull
         emit('update_log', {'message': 'Pulling latest code from GitHub...'})
 
@@ -5059,7 +5067,7 @@ def handle_trigger_update():
             capture_output=True,
             text=True,
             timeout=30,
-            cwd=os.getcwd()
+            cwd=repo_path
         )
 
         if result.returncode != 0:
