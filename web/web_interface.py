@@ -5051,19 +5051,15 @@ def handle_trigger_update():
     emit('update_log', {'message': 'Starting auto-update...'})
 
     try:
-        # Step 0: Configure Git safe directory (for WSL ownership issues)
         repo_path = os.getcwd()
-        subprocess.run(
-            ["git", "config", "--global", "--add", "safe.directory", repo_path],
-            capture_output=True,
-            timeout=5
-        )
 
-        # Step 1: Git pull
+        # Step 1: Git pull with safe.directory config applied directly
         emit('update_log', {'message': 'Pulling latest code from GitHub...'})
 
+        # Use -c flag to pass safe.directory config directly to git pull command
+        # This avoids relying on .gitconfig files which may not persist between subprocess calls
         result = subprocess.run(
-            ["git", "pull"],
+            ["git", "-c", f"safe.directory={repo_path}", "pull"],
             capture_output=True,
             text=True,
             timeout=30,
