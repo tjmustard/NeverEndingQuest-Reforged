@@ -134,24 +134,48 @@ if not exist "config.py" (
     copy config_template.py config.py
     echo [OK] Created config.py from template
     echo.
-    echo ========================================
-    echo   IMPORTANT: API Key Required
-    echo ========================================
-    echo.
-    echo Opening config.py for you to add your OpenAI API key...
-    echo.
-    echo Find this line:
-    echo   OPENAI_API_KEY = "your-api-key-here"
-    echo.
-    echo And replace "your-api-key-here" with your actual API key
-    echo Get your key at: https://platform.openai.com/api-keys
-    echo.
-    timeout /t 3 >nul
-    notepad config.py
 
+    REM Prompt user for API key with GUI dialog
+    echo ========================================
+    echo   OpenAI API Key Setup
+    echo ========================================
     echo.
-    echo After adding your API key, save and close Notepad.
-    pause
+    echo Choose your setup method:
+    echo   1. Enter API key now (recommended)
+    echo   2. Skip and add manually later
+    echo.
+    choice /C 12 /N /M "Enter your choice (1 or 2): "
+
+    if errorlevel 2 (
+        REM User chose to skip
+        echo.
+        echo [SKIPPED] You can add your API key later by editing config.py
+        echo Find this line: OPENAI_API_KEY = "your-api-key-here"
+        echo Get your key at: https://platform.openai.com/api-keys
+        echo.
+        timeout /t 3 >nul
+    ) else (
+        REM User chose to enter key now
+        echo.
+        echo Opening API key entry dialog...
+        echo.
+
+        REM Use PowerShell to show input dialog
+        for /f "delims=" %%i in ('powershell -Command "$key = [Microsoft.VisualBasic.Interaction]::InputBox('Enter your OpenAI API key (starts with sk-):' + [Environment]::NewLine + [Environment]::NewLine + 'Get your key at: https://platform.openai.com/api-keys' + [Environment]::NewLine + [Environment]::NewLine + 'Leave blank to skip and add manually later.', 'NeverEndingQuest - API Key Setup'); if ($key) { $key } else { 'SKIP' }"') do set API_KEY=%%i
+
+        if "!API_KEY!"=="SKIP" (
+            echo [SKIPPED] You can add your API key later by editing config.py
+            timeout /t 2 >nul
+        ) else if "!API_KEY!"=="" (
+            echo [SKIPPED] No key entered. You can add it later by editing config.py
+            timeout /t 2 >nul
+        ) else (
+            REM Replace the API key in config.py
+            powershell -Command "(Get-Content config.py) -replace 'your-api-key-here', '!API_KEY!' | Set-Content config.py"
+            echo [OK] API key added to config.py successfully!
+            timeout /t 2 >nul
+        )
+    )
 ) else (
     echo [OK] config.py already exists
 )
