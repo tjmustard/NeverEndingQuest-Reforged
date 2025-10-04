@@ -56,7 +56,15 @@
             letter-spacing: 0.5px;
             margin-left: 8px;
         }
-        
+
+        .header h1 button {
+            -webkit-text-fill-color: white;
+            -webkit-background-clip: unset;
+            background-clip: unset;
+            filter: none;
+            font-size: 12px;
+        }
+
         @keyframes shimmerEmerald {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
@@ -4060,7 +4068,7 @@
     </div>
     
     <div class="header">
-        <h1>Never<span>Ending</span>Quest <small style="font-size: 0.4em; opacity: 0.7;" id="version-display">v{{ version }}</small></h1>
+        <h1>Never<span>Ending</span>Quest <small style="font-size: 0.4em; opacity: 0.7;" id="version-display">v{{ version }}</small><button id="update-button" style="display: none; margin-left: 10px; padding: 4px 12px; font-size: 11px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-family: Arial, sans-serif;" onclick="showUpdateDialog()">[UPDATE] Update Available</button></h1>
         <div class="location-info" id="location-info">
             <div class="location-name" id="location-name">Loading location...</div>
             <div class="location-details" id="location-details"></div>
@@ -6815,6 +6823,25 @@
         </div>
     </div>
 
+    <!-- Update Dialog -->
+    <div id="update-dialog-overlay" class="save-dialog-overlay">
+        <div class="save-dialog">
+            <h3>🔄 Update Available</h3>
+            <p id="update-version-info">A new version is available!</p>
+            <div class="reset-warning-box">
+                <strong>⚠️ Backup Recommended</strong>
+                <p>Before updating, we recommend backing up your saved games and any custom modules.</p>
+            </div>
+            <div class="dialog-buttons">
+                <button class="dialog-button primary" onclick="proceedWithUpdate()">Proceed with Update</button>
+                <button class="dialog-button secondary" onclick="closeUpdateDialog()">Cancel</button>
+            </div>
+            <div id="update-progress" style="display:none; margin-top: 20px;">
+                <p id="update-status">Updating...</p>
+            </div>
+        </div>
+    </div>
+
 
     <script>
         let selectedSaveFolder = null;
@@ -7236,6 +7263,24 @@
             document.querySelectorAll('.save-load-buttons button').forEach(b => b.disabled = true);
         }
 
+        // --- AUTO-UPDATE FUNCTIONS ---
+        function showUpdateDialog() {
+            console.log('[UPDATE] Opening update dialog');
+            document.getElementById('update-dialog-overlay').style.display = 'flex';
+        }
+
+        function closeUpdateDialog() {
+            console.log('[UPDATE] Closing update dialog');
+            document.getElementById('update-dialog-overlay').style.display = 'none';
+        }
+
+        function proceedWithUpdate() {
+            console.log('[UPDATE] Starting update process');
+            document.getElementById('update-progress').style.display = 'block';
+            document.getElementById('update-status').textContent = 'Starting update...';
+            socket.emit('trigger_update');
+        }
+
         // --- NEW SOCKET LISTENERS FOR RESTORE/RESET ---
         socket.on('system_message', (data) => {
             addMessage('game-output', { type: 'system', content: data.content });
@@ -7253,12 +7298,42 @@
         socket.on('reset_complete', (data) => {
             console.log('Reset complete signal received:', data.message);
             addMessage('game-output', { type: 'system', content: 'Campaign has been reset. The page will now reload.' });
-            
+
             setTimeout(() => {
                 window.location.reload();
-            }, 2000); 
+            }, 2000);
         });
-        
+
+        // --- AUTO-UPDATE SOCKET HANDLERS ---
+        socket.on('version_status', function(data) {
+            console.log('[UPDATE] Version status received:', data);
+            if (data.update_available) {
+                console.log('[UPDATE] Update available, showing button');
+                document.getElementById('update-button').style.display = 'inline-block';
+                document.getElementById('update-version-info').textContent =
+                    'A new version is available: v' + data.local_version + ' -> v' + data.remote_version;
+            } else {
+                console.log('[UPDATE] No update available');
+            }
+        });
+
+        socket.on('update_log', function(data) {
+            console.log('[UPDATE] Update log:', data.message);
+            document.getElementById('update-status').textContent = data.message;
+        });
+
+        socket.on('update_error', function(data) {
+            console.error('[UPDATE] Update error:', data.error);
+            alert('Update failed: ' + data.error);
+            closeUpdateDialog();
+        });
+
+        socket.on('update_complete', function(data) {
+            console.log('[UPDATE] Update complete:', data.message);
+            document.getElementById('update-status').textContent = data.message + ' Please refresh the page.';
+            setTimeout(() => location.reload(), 2000);
+        });
+
         // Exit game functionality
         function exitGame() {
             // Show confirmation dialog

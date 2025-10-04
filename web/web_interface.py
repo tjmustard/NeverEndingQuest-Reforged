@@ -1943,6 +1943,20 @@ def handle_connect():
     """Handle client connection"""
     emit('connected', {'data': 'Connected to NeverEndingQuest'})
 
+    # Check for updates and notify client
+    try:
+        from utils.version_checker import check_for_updates
+        status, local_ver, remote_ver, message = check_for_updates(silent=True)
+
+        emit('version_status', {
+            'update_available': status == 'update_available',
+            'local_version': local_ver,
+            'remote_version': remote_ver,
+            'message': message
+        })
+    except Exception as e:
+        print(f"[VERSION_CHECK] Error checking for updates: {e}")
+
     # Load and send cached messages from previous session
     cached_messages = load_message_cache()
     if cached_messages:
@@ -5026,6 +5040,63 @@ def handle_generate_unified_assets(data):
     info(f"TOOLKIT: Background thread started")
     
     return {'status': 'started'}
+
+@socketio.on('trigger_update')
+def handle_trigger_update():
+    """Handle auto-update request from client"""
+    import subprocess
+    import sys
+    import os
+
+    emit('update_log', {'message': 'Starting auto-update...'})
+
+    try:
+        # Step 1: Git pull
+        emit('update_log', {'message': 'Pulling latest code from GitHub...'})
+
+        result = subprocess.run(
+            ["git", "pull"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=os.getcwd()
+        )
+
+        if result.returncode != 0:
+            emit('update_error', {'error': f'Git pull failed: {result.stderr}'})
+            return
+
+        emit('update_log', {'message': f'Git: {result.stdout.strip()}'})
+
+        # Step 2: Pip install
+        emit('update_log', {'message': 'Updating dependencies...'})
+
+        pip_cmd = [sys.executable, "-m", "pip", "install", "-r", "requirements.txt", "--upgrade"]
+
+        result = subprocess.run(
+            pip_cmd,
+            capture_output=True,
+            text=True,
+            timeout=120
+        )
+
+        if result.returncode != 0:
+            emit('update_error', {'error': f'Pip install failed: {result.stderr}'})
+            return
+
+        emit('update_log', {'message': 'Dependencies updated successfully!'})
+
+        # Step 3: Restart server
+        emit('update_complete', {'message': 'Update complete! Server restarting...'})
+
+        # Give client time to receive message
+        socketio.sleep(1)
+
+        # Restart the server process
+        os.execv(sys.executable, ['python'] + sys.argv)
+
+    except Exception as e:
+        emit('update_error', {'error': str(e)})
 
 if __name__ == '__main__':
     # Create templates directory if it doesn't exist
