@@ -130,12 +130,18 @@ echo [OK] Dependencies installed successfully!
 REM Step 6: Setup configuration
 echo.
 echo Step 6: Setting up configuration...
+
+REM Copy template if config.py doesn't exist
 if not exist "config.py" (
     copy config_template.py config.py
     echo [OK] Created config.py from template
-    echo.
+)
 
-    REM Prompt user for API key with GUI dialog
+REM Check if API key needs to be configured (check for default placeholder)
+findstr /C:"your_openai_api_key_here" config.py >nul 2>&1
+if %errorlevel% equ 0 (
+    REM API key is still the default placeholder
+    echo.
     echo ========================================
     echo   OpenAI API Key Setup
     echo ========================================
@@ -150,7 +156,7 @@ if not exist "config.py" (
         REM User chose to skip
         echo.
         echo [SKIPPED] You can add your API key later by editing config.py
-        echo Find this line: OPENAI_API_KEY = "your-api-key-here"
+        echo Find this line: OPENAI_API_KEY = "your_openai_api_key_here"
         echo Get your key at: https://platform.openai.com/api-keys
         echo.
         timeout /t 3 >nul
@@ -170,14 +176,14 @@ if not exist "config.py" (
             echo [SKIPPED] Dialog was cancelled. You can add the key later by editing config.py
             timeout /t 2 >nul
         ) else (
-            REM Replace the API key in config.py
-            powershell -NoProfile -Command "(Get-Content config.py) -replace 'your-api-key-here', '!API_KEY!' | Set-Content config.py"
+            REM Replace the API key in config.py (match actual template placeholder)
+            powershell -NoProfile -Command "(Get-Content config.py) -replace 'your_openai_api_key_here', '!API_KEY!' | Set-Content config.py"
             echo [OK] API key added to config.py successfully!
             timeout /t 2 >nul
         )
     )
 ) else (
-    echo [OK] config.py already exists
+    echo [OK] API key already configured in config.py
 )
 
 REM Step 6b: Create empty party_tracker.json to prevent startup errors
