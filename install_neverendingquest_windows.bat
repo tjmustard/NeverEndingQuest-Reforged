@@ -180,6 +180,17 @@ if not exist "config.py" (
     echo [OK] config.py already exists
 )
 
+REM Step 6b: Create empty party_tracker.json to prevent startup errors
+echo.
+echo Step 6b: Creating initial game files...
+
+if not exist "party_tracker.json" (
+    echo {} > party_tracker.json
+    echo [OK] Created empty party_tracker.json
+) else (
+    echo [OK] party_tracker.json already exists
+)
+
 REM Step 7: Create desktop shortcut and launch script
 echo.
 echo Step 7: Creating launch scripts...
