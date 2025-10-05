@@ -10,7 +10,7 @@ An AI-powered Dungeon Master for running SRD 5.2.1 compatible tabletop RPG campa
 
 ## 🎮 Get Started | 💬 Join the Community
 
-**Ready to play?** → [Quick Start Guide](#quick-start) | [Download Windows Installer](https://raw.githubusercontent.com/MoonlightByte/NeverEndingQuest/main/install_neverendingquest_windows.bat)
+**Ready to play?** → [Quick Start Guide](#quick-start) | [Download Windows Installer](https://raw.githubusercontent.com/MoonlightByte/NeverEndingQuest/main/install_neverendingquest_windows.bat) *(Right-click → Save As)*
 
 **Need help or want to share your adventures?** → [r/NeverEndingQuest on Reddit](https://www.reddit.com/r/NeverEndingQuest/)
 
