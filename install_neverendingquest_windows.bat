@@ -298,19 +298,35 @@ if errorlevel 2 (
     if "!MODULE_CHOICE!"=="" (
         REM Install all modules
         for /l %%i in (1,1,!MODULE_COUNT!) do (
-            call :INSTALL_MODULE %%i
+            call set CURRENT_MODULE=%%MODULE_%%i%%
+            echo Copying !CURRENT_MODULE!...
+            xcopy "..\neverendingquest-modules\!CURRENT_MODULE!" "modules\!CURRENT_MODULE!" /E /I /Y >nul 2>&1
+            if errorlevel 1 (
+                echo [WARNING] Failed to install !CURRENT_MODULE!
+            ) else (
+                echo [OK] Installed !CURRENT_MODULE!
+            )
         )
     ) else (
         REM Install specific module
-        call :INSTALL_MODULE !MODULE_CHOICE!
+        call set CURRENT_MODULE=%%MODULE_!MODULE_CHOICE!%%
+        if defined CURRENT_MODULE (
+            echo Copying !CURRENT_MODULE!...
+            xcopy "..\neverendingquest-modules\!CURRENT_MODULE!" "modules\!CURRENT_MODULE!" /E /I /Y >nul 2>&1
+            if errorlevel 1 (
+                echo [WARNING] Failed to install !CURRENT_MODULE!
+            ) else (
+                echo [OK] Installed !CURRENT_MODULE!
+            )
+        ) else (
+            echo [WARNING] Invalid module selection
+        )
     )
-    goto AFTER_MODULE_INSTALL
 ) else (
     REM User chose default modules - they're already in the repo
     echo [OK] Using default modules (Thornwood Watch + Keep of Doom)
 )
 
-:AFTER_MODULE_INSTALL
 :SKIP_MODULE_SETUP
 
 REM Step 7: Create desktop shortcut and launch script
@@ -362,27 +378,5 @@ REM Launch the game
 call venv\Scripts\activate.bat
 start http://localhost:8357
 python run_web.py
-
-goto END
-
-:INSTALL_MODULE
-REM Subroutine to install a single module by number
-setlocal
-set MODULE_NUM=%1
-call set MODULE_NAME=%%MODULE_%MODULE_NUM%%%
-if not defined MODULE_NAME (
-    echo [WARNING] Invalid module selection: %MODULE_NUM%
-    endlocal
-    exit /b 1
-)
-echo Copying %MODULE_NAME%...
-xcopy "..\neverendingquest-modules\%MODULE_NAME%" "modules\%MODULE_NAME%" /E /I /Y >nul 2>&1
-if !errorlevel! equ 0 (
-    echo [OK] Installed %MODULE_NAME%
-) else (
-    echo [WARNING] Failed to install %MODULE_NAME%
-)
-endlocal
-exit /b 0
 
 :END
