@@ -240,21 +240,12 @@ if errorlevel 2 (
     echo.
     set MODULE_COUNT=0
     for /d %%d in ("..\neverendingquest-modules\*") do (
-        REM Skip .git and other non-module directories
+        REM Skip .git directory and only check for manifest.json
         if /I not "%%~nxd"==".git" (
             if exist "%%d\manifest.json" (
                 set /a MODULE_COUNT+=1
                 echo   !MODULE_COUNT!. %%~nxd
                 set MODULE_!MODULE_COUNT!=%%~nxd
-            ) else (
-                REM Check for module.json pattern
-                for %%f in ("%%d\*_module.json") do (
-                    set /a MODULE_COUNT+=1
-                    echo   !MODULE_COUNT!. %%~nxd
-                    set MODULE_!MODULE_COUNT!=%%~nxd
-                    goto NEXT_MODULE
-                )
-                :NEXT_MODULE
             )
         )
     )
