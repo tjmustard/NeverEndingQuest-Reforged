@@ -209,11 +209,14 @@ echo   2. Community modules (from neverendingquest-modules repo)
 echo.
 choice /C 12 /N /M "Enter your choice (1 or 2): "
 
-if errorlevel 2 (
+if %errorlevel%==2 (
     REM User chose community modules
     echo.
     echo Fetching available community modules...
     echo.
+
+    REM Save current directory
+    set "INSTALL_DIR=%CD%"
 
     REM Clone the modules repo if it doesn't exist
     if not exist "..\neverendingquest-modules" (
@@ -223,15 +226,15 @@ if errorlevel 2 (
             echo [WARNING] Failed to clone modules repository
             echo Continuing with default modules...
             timeout /t 3 >nul
-            cd NeverEndingQuest
+            cd "%INSTALL_DIR%"
             goto SKIP_MODULE_SETUP
         )
-        cd NeverEndingQuest
+        cd "%INSTALL_DIR%"
     ) else (
         REM Update existing modules repo
         cd ..\neverendingquest-modules
         git pull >nul 2>&1
-        cd ..\NeverEndingQuest
+        cd "%INSTALL_DIR%"
     )
 
     REM List available modules
@@ -268,7 +271,7 @@ if errorlevel 2 (
     echo.
     choice /C 12 /N /M "Enter your choice (1 or 2): "
 
-    if errorlevel 2 (
+    if %errorlevel%==2 (
         REM Replace - delete default modules
         echo.
         echo Removing default modules...
