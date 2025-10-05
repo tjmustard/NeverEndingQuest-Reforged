@@ -231,9 +231,8 @@ echo.
 echo Installation location: %CD%
 echo.
 echo HOW TO RUN:
-echo   Option 1: Double-click "NeverEndingQuest" icon on your Desktop
-echo   Option 2: Run launch_game.bat in this folder
-echo   Option 3: Run manually:
+echo   Option 1: Run launch_game.bat in this folder
+echo   Option 2: Run manually:
 echo            venv\Scripts\activate
 echo            python run_web.py
 echo.
