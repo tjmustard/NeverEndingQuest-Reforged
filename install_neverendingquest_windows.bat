@@ -197,6 +197,136 @@ if not exist "party_tracker.json" (
     echo [OK] party_tracker.json already exists
 )
 
+REM Step 6c: Module selection
+echo.
+echo ========================================
+echo   Module Selection
+echo ========================================
+echo.
+echo Choose your starting modules:
+echo   1. Default modules (Thornwood Watch + Keep of Doom)
+echo   2. Community modules (from neverendingquest-modules repo)
+echo.
+choice /C 12 /N /M "Enter your choice (1 or 2): "
+
+if errorlevel 2 (
+    REM User chose community modules
+    echo.
+    echo Fetching available community modules...
+    echo.
+
+    REM Clone the modules repo if it doesn't exist
+    if not exist "..\neverendingquest-modules" (
+        cd ..
+        git clone https://github.com/MoonlightByte/neverendingquest-modules.git
+        if !errorlevel! neq 0 (
+            echo [WARNING] Failed to clone modules repository
+            echo Continuing with default modules...
+            timeout /t 3 >nul
+            cd NeverEndingQuest
+            goto SKIP_MODULE_SETUP
+        )
+        cd NeverEndingQuest
+    ) else (
+        REM Update existing modules repo
+        cd ..\neverendingquest-modules
+        git pull >nul 2>&1
+        cd ..\NeverEndingQuest
+    )
+
+    REM List available modules
+    echo.
+    echo Available community modules:
+    echo.
+    set MODULE_COUNT=0
+    for /d %%d in ("..\neverendingquest-modules\*") do (
+        REM Skip .git and other non-module directories
+        if /I not "%%~nxd"==".git" (
+            if exist "%%d\manifest.json" (
+                set /a MODULE_COUNT+=1
+                echo   !MODULE_COUNT!. %%~nxd
+                set MODULE_!MODULE_COUNT!=%%~nxd
+            ) else (
+                REM Check for module.json pattern
+                for %%f in ("%%d\*_module.json") do (
+                    set /a MODULE_COUNT+=1
+                    echo   !MODULE_COUNT!. %%~nxd
+                    set MODULE_!MODULE_COUNT!=%%~nxd
+                    goto NEXT_MODULE
+                )
+                :NEXT_MODULE
+            )
+        )
+    )
+
+    if !MODULE_COUNT! equ 0 (
+        echo [WARNING] No community modules found
+        echo Continuing with default modules...
+        timeout /t 3 >nul
+        goto SKIP_MODULE_SETUP
+    )
+
+    echo.
+    echo Enter module number to install (or press Enter for all):
+    set /p MODULE_CHOICE=
+
+    echo.
+    echo Do you want to:
+    echo   1. Add to existing default modules
+    echo   2. Replace default modules
+    echo.
+    choice /C 12 /N /M "Enter your choice (1 or 2): "
+
+    if errorlevel 2 (
+        REM Replace - delete default modules
+        echo.
+        echo Removing default modules...
+        if exist "modules\The_Thornwood_Watch" (
+            rmdir /s /q "modules\The_Thornwood_Watch"
+            echo [OK] Removed Thornwood Watch
+        )
+        if exist "modules\Keep_of_Doom" (
+            rmdir /s /q "modules\Keep_of_Doom"
+            echo [OK] Removed Keep of Doom
+        )
+    )
+
+    REM Copy selected module(s)
+    echo.
+    echo Installing community module(s)...
+
+    if "!MODULE_CHOICE!"=="" (
+        REM Install all modules
+        for /l %%i in (1,1,!MODULE_COUNT!) do (
+            echo Copying !MODULE_%%i!...
+            xcopy "..\neverendingquest-modules\!MODULE_%%i!" "modules\!MODULE_%%i!" /E /I /Y >nul
+            if !errorlevel! equ 0 (
+                echo [OK] Installed !MODULE_%%i!
+            ) else (
+                echo [WARNING] Failed to install !MODULE_%%i!
+            )
+        )
+    ) else (
+        REM Install specific module
+        if defined MODULE_!MODULE_CHOICE! (
+            echo Copying !MODULE_%MODULE_CHOICE%!...
+            xcopy "..\neverendingquest-modules\!MODULE_%MODULE_CHOICE%!" "modules\!MODULE_%MODULE_CHOICE%!" /E /I /Y >nul
+            if !errorlevel! equ 0 (
+                echo [OK] Installed !MODULE_%MODULE_CHOICE%!
+            ) else (
+                echo [WARNING] Failed to install !MODULE_%MODULE_CHOICE%!
+            )
+        ) else (
+            echo [WARNING] Invalid module selection
+        )
+    )
+) else (
+    REM User chose default modules - they're already in the repo
+    echo [OK] Using default modules (Thornwood Watch + Keep of Doom)
+)
+
+:SKIP_MODULE_SETUP
+
 REM Step 7: Create desktop shortcut and launch script
 echo.
 echo Step 7: Creating launch scripts...
