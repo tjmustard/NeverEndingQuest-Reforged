@@ -298,33 +298,19 @@ if errorlevel 2 (
     if "!MODULE_CHOICE!"=="" (
         REM Install all modules
         for /l %%i in (1,1,!MODULE_COUNT!) do (
-            echo Copying !MODULE_%%i!...
-            xcopy "..\neverendingquest-modules\!MODULE_%%i!" "modules\!MODULE_%%i!" /E /I /Y >nul
-            if !errorlevel! equ 0 (
-                echo [OK] Installed !MODULE_%%i!
-            ) else (
-                echo [WARNING] Failed to install !MODULE_%%i!
-            )
+            call :INSTALL_MODULE %%i
         )
     ) else (
         REM Install specific module
-        if defined MODULE_!MODULE_CHOICE! (
-            echo Copying !MODULE_%MODULE_CHOICE%!...
-            xcopy "..\neverendingquest-modules\!MODULE_%MODULE_CHOICE%!" "modules\!MODULE_%MODULE_CHOICE%!" /E /I /Y >nul
-            if !errorlevel! equ 0 (
-                echo [OK] Installed !MODULE_%MODULE_CHOICE%!
-            ) else (
-                echo [WARNING] Failed to install !MODULE_%MODULE_CHOICE%!
-            )
-        ) else (
-            echo [WARNING] Invalid module selection
-        )
+        call :INSTALL_MODULE !MODULE_CHOICE!
     )
+    goto AFTER_MODULE_INSTALL
 ) else (
     REM User chose default modules - they're already in the repo
     echo [OK] Using default modules (Thornwood Watch + Keep of Doom)
 )
 
+:AFTER_MODULE_INSTALL
 :SKIP_MODULE_SETUP
 
 REM Step 7: Create desktop shortcut and launch script
@@ -376,5 +362,27 @@ REM Launch the game
 call venv\Scripts\activate.bat
 start http://localhost:8357
 python run_web.py
+
+goto END
+
+:INSTALL_MODULE
+REM Subroutine to install a single module by number
+setlocal
+set MODULE_NUM=%1
+call set MODULE_NAME=%%MODULE_%MODULE_NUM%%%
+if not defined MODULE_NAME (
+    echo [WARNING] Invalid module selection: %MODULE_NUM%
+    endlocal
+    exit /b 1
+)
+echo Copying %MODULE_NAME%...
+xcopy "..\neverendingquest-modules\%MODULE_NAME%" "modules\%MODULE_NAME%" /E /I /Y >nul 2>&1
+if !errorlevel! equ 0 (
+    echo [OK] Installed %MODULE_NAME%
+) else (
+    echo [WARNING] Failed to install %MODULE_NAME%
+)
+endlocal
+exit /b 0
 
 :END
