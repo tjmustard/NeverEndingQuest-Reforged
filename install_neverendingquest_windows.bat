@@ -216,7 +216,7 @@ if %errorlevel%==2 (
     echo.
 
     REM Save current directory
-    set "INSTALL_DIR=%CD%"
+    pushd .
 
     REM Clone the modules repo if it doesn't exist
     if not exist "..\neverendingquest-modules" (
@@ -226,15 +226,15 @@ if %errorlevel%==2 (
             echo [WARNING] Failed to clone modules repository
             echo Continuing with default modules...
             timeout /t 3 >nul
-            cd "%INSTALL_DIR%"
+            popd
             goto SKIP_MODULE_SETUP
         )
-        cd "%INSTALL_DIR%"
+        popd
     ) else (
         REM Update existing modules repo
         cd ..\neverendingquest-modules
         git pull >nul 2>&1
-        cd "%INSTALL_DIR%"
+        popd
     )
 
     REM List available modules
