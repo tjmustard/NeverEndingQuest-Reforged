@@ -6,6 +6,18 @@ An AI-powered Dungeon Master for running SRD 5.2.1 compatible tabletop RPG campa
 
 **🚀 NEW: Advanced Token Compression System** - Play longer, pay less! Revolutionary compression technology reduces API costs by 70-90% while maintaining full game fidelity. Run the game locally with open-source models or dramatically reduce OpenAI API expenses.
 
+---
+
+## 🎮 Get Started | 💬 Join the Community
+
+**Ready to play?** → [Quick Start Guide](#quick-start) | [Download Windows Installer](https://raw.githubusercontent.com/MoonlightByte/NeverEndingQuest/main/install_neverendingquest_windows.bat)
+
+**Need help or want to share your adventures?** → [r/NeverEndingQuest on Reddit](https://www.reddit.com/r/NeverEndingQuest/)
+
+**Report bugs or request features** → [GitHub Issues](https://github.com/MoonlightByte/NeverEndingQuest/issues)
+
+---
+
 ## Table of Contents
 
 - [Quick Start](#quick-start)
