@@ -283,6 +283,94 @@ class ModuleValidator:
                 self.results["encounter"]["failed"] += 1
                 self.results["encounter"]["errors"].append(f"{file_path.name}: {error}")
 
+    def validate_area_connectivity(self):
+        """Validate that all areas are reachable from the starting area"""
+        import json
+
+        areas_dir = self.module_path / "areas"
+
+        if not areas_dir.exists():
+            return True, []
+
+        # Load all area files
+        area_data = {}
+        area_files = list(areas_dir.glob("*_BU.json"))
+
+        if not area_files:
+            area_files = list(areas_dir.glob("*.json"))
+
+        for file_path in area_files:
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    area_id = data.get('areaId')
+                    if area_id:
+                        area_data[area_id] = {
+                            'name': data.get('areaName'),
+                            'locations': data.get('locations', [])
+                        }
+            except Exception:
+                continue
+
+        if len(area_data) <= 1:
+            return True, []  # Single area modules don't need connectivity checks
+
+        # Build connectivity graph
+        area_connections = {}
+        for area_id, data in area_data.items():
+            area_connections[area_id] = set()
+            for location in data['locations']:
+                area_conn = location.get('areaConnectivity', [])
+
+                # Map area names to area IDs
+                for area_name in area_conn:
+                    for target_id, target_data in area_data.items():
+                        if target_data['name'] == area_name:
+                            area_connections[area_id].add(target_id)
+                            break
+
+        # Find starting area (prefer town areas)
+        sorted_areas = sorted(area_data.keys())
+        starting_area = None
+
+        for area_id in sorted_areas:
+            if 'HFG' in area_id or 'VO' in area_id or 'TOWN' in area_id:
+                starting_area = area_id
+                break
+
+        if not starting_area:
+            starting_area = sorted_areas[0]
+
+        # BFS to find all reachable areas
+        visited = set()
+        queue = [starting_area]
+
+        while queue:
+            current = queue.pop(0)
+            if current in visited:
+                continue
+            visited.add(current)
+
+            for neighbor in area_connections.get(current, []):
+                if neighbor not in visited:
+                    queue.append(neighbor)
+
+        # Check for unreachable areas
+        all_areas = set(area_data.keys())
+        unreachable = all_areas - visited
+
+        errors = []
+        if unreachable:
+            for area_id in sorted(unreachable):
+                area_name = area_data[area_id]['name']
+                errors.append(f"{area_id} ({area_name}) is unreachable from starting area {starting_area}")
+
+        # Check for isolated starting area
+        if not area_connections.get(starting_area):
+            errors.append(f"Starting area {starting_area} ({area_data[starting_area]['name']}) has no connections - players cannot leave!")
+
+        return len(errors) == 0, errors
+
     def validate_all_files(self):
         """Validate all files and return results (required by module_stitcher)"""
         self.run_all_validations()
@@ -310,6 +398,14 @@ class ModuleValidator:
         self.validate_party_tracker()
         self.validate_module_context()
         self.validate_encounter_files()
+
+        # Run connectivity validation
+        success, errors = self.validate_area_connectivity()
+        if success:
+            self.results["connectivity"]["passed"] = 1
+        else:
+            self.results["connectivity"]["failed"] = 1
+            self.results["connectivity"]["errors"] = errors
                 
     def run_validation(self):
         """Run all validations"""
@@ -355,20 +451,38 @@ class ModuleValidator:
         print("DETAILED RESULTS BY FILE TYPE:")
         print("-" * 80)
         
-        file_type_order = ["module", "area", "character", "monster", "map", "plot", 
-                          "party", "module_context", "encounter"]
+        file_type_order = ["module", "area", "character", "monster", "map", "plot",
+                          "party", "module_context", "encounter", "connectivity"]
         
         for file_type in file_type_order:
-            if file_type not in self.results or not self.results[file_type]["files"]:
+            if file_type not in self.results:
                 continue
-                
+
+            # Special handling for connectivity (no files list)
+            if file_type == "connectivity":
+                result = self.results[file_type]
+                print(f"\nAREA CONNECTIVITY CHECK")
+                if result.get("passed", 0) > 0:
+                    print(f"  Status: [OK] ALL AREAS REACHABLE")
+                elif result.get("failed", 0) > 0:
+                    print(f"  Status: [ERROR] CONNECTIVITY ISSUES DETECTED")
+                    print("  Errors:")
+                    for error in result.get("errors", []):
+                        print(f"    - {error}")
+                else:
+                    print(f"  Status: [SKIPPED] No multi-area module")
+                continue
+
+            if not self.results[file_type].get("files"):
+                continue
+
             result = self.results[file_type]
             total = result["passed"] + result["failed"]
-            
+
             print(f"\n{file_type.upper()} FILES ({total} files)")
             print(f"  Status: {'[OK] ALL PASSED' if result['failed'] == 0 else '[ERROR] FAILURES DETECTED'}")
             print(f"  Passed: {result['passed']}/{total}")
-            
+
             if result["failed"] > 0:
                 print(f"  Failed: {result['failed']}/{total}")
                 print("  Errors:")
