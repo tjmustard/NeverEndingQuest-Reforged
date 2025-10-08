@@ -499,7 +499,7 @@ def index():
         with open('VERSION', 'r') as f:
             version = f.read().strip()
     except:
-        version = "0.3.0"
+        version = "0.3.1"
 
     return render_template('game_interface.html', version=version)
 

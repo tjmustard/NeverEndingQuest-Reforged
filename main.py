@@ -2610,11 +2610,19 @@ def main_game_loop():
     # --- START: COMBAT RESUMPTION LOGIC ---
     party_tracker_data = load_json_file("party_tracker.json")
     combat_was_resumed = False  # Track if we resumed from combat
-    
+
     # Initialize variables needed in main loop for both paths (combat resume and normal startup)
     module_name = party_tracker_data.get("module", "").replace(" ", "_") if party_tracker_data else ""
     path_manager = ModulePathManager(module_name)
     debug(f"INITIALIZATION: Path manager initialized for module: '{module_name}'", category="module_management")
+
+    # Reload global location_graph to ensure it's current for the active module
+    global location_graph
+    print("DEBUG: [LocationGraph] Reloading location graph for current module...")
+    location_graph = LocationGraph()
+    location_graph.load_module_data()
+    print(f"DEBUG: [LocationGraph] Reload complete. Total nodes: {len(location_graph.nodes)}, Total edges: {sum(len(edges) for edges in location_graph.edges.values())}")
+    debug(f"INITIALIZATION: Location graph reloaded with {len(location_graph.nodes)} nodes", category="module_management")
     
     # Load validation prompt for both paths - needed in main loop
     validation_prompt_text = load_validation_prompt()
