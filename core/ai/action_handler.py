@@ -770,11 +770,104 @@ def process_action(action, party_tracker_data, location_data, conversation_histo
             # Original error for non-module path issues
             print(f"ERROR: {error_message}")
             return create_return(
-                status="error", 
+                status="error",
                 needs_update=False,
                 response_data={"error_message": f"Path Validation: {error_message}"}
             )
-        
+
+        # TRANSITION INTELLIGENCE AGENT: Pre-validation for encounter blocking and plot progression
+        info("VALIDATION: Path exists, calling transition intelligence agent...", category="location_transitions")
+
+        from utils.path_encounter_analyzer import analyze_path_for_encounters, build_path_context_for_ai
+        from core.ai.transition_atlas_builder import build_transition_atlas
+        from core.ai.transition_validator import validate_transition_request
+
+        # Get path from pathfinding
+        success, path, path_message = location_graph.find_path(current_location_id, new_location_name_or_id)
+
+        if not success or not path:
+            # Should not happen since we already validated, but handle gracefully
+            warning(f"Path generation failed after validation: {path_message}", category="location_transitions")
+            path = [current_location_id, new_location_name_or_id]  # Fallback to direct path
+
+        # Analyze path for encounters and blocking conditions
+        # Uses encounters array to determine visited status (no separate tracker needed)
+        current_module = party_tracker_data.get("module", "").replace(" ", "_")
+        path_analysis = analyze_path_for_encounters(path, location_graph, current_module)
+
+        # Build transition-specific atlas with exploration markers
+        transition_atlas = build_transition_atlas(location_graph, current_module)
+
+        # Load plot data
+        plot_data = {}
+        try:
+            plot_file = path_manager.get_plot_path()
+            plot_data = safe_read_json(plot_file) or {}
+        except Exception as e:
+            debug(f"Could not load plot data: {e}", category="location_transitions")
+
+        # Get party level
+        party_level = 1
+        if party_tracker_data.get("partyMembers"):
+            try:
+                first_member = party_tracker_data["partyMembers"][0]
+                from updates.update_character_info import normalize_character_name
+                char_name = normalize_character_name(first_member)
+                char_file = path_manager.get_character_path(char_name)
+                if os.path.exists(char_file):
+                    char_data = safe_read_json(char_file)
+                    if char_data:
+                        party_level = char_data.get("level", 1)
+            except Exception as e:
+                debug(f"Could not determine party level: {e}", category="location_transitions")
+
+        # Get player request from last conversation message
+        player_request = ""
+        if conversation_history and len(conversation_history) > 0:
+            for msg in reversed(conversation_history):
+                if msg.get("role") == "user" and not msg.get("content", "").startswith("Error Note:"):
+                    player_request = msg.get("content", "")
+                    break
+
+        # Call transition intelligence agent
+        transition_result = validate_transition_request(
+            player_request=player_request,
+            current_location_id=current_location_id,
+            current_location_name=current_location_name,
+            current_area_id=current_area_id,
+            current_area_name=current_area_name,
+            target_location_id=new_location_name_or_id,
+            path=path,
+            path_analysis=path_analysis,
+            transition_atlas=transition_atlas,
+            plot_data=plot_data,
+            party_level=party_level
+        )
+
+        # Check if transition was blocked
+        if not transition_result.get("approved", True):
+            # Travel blocked - return narrative guidance to main DM
+            narrative_guidance = transition_result.get("narrative_guidance", "")
+            stop_location = transition_result.get("stop_location", "")
+            reason = transition_result.get("reason", "Unknown")
+
+            error_msg = f"Travel Blocked: {reason}\n\n{narrative_guidance}"
+
+            if transition_result.get("plot_guidance"):
+                error_msg += f"\n\nPlot Guidance: {transition_result['plot_guidance']}"
+
+            info(f"VALIDATION: Transition blocked by intelligence agent at {stop_location}", category="location_transitions")
+            print(f"TRANSITION BLOCKED: {reason}")
+
+            return create_return(
+                status="error",
+                needs_update=False,
+                response_data={"error_message": error_msg}
+            )
+
+        # Transition approved by intelligence agent
+        info("VALIDATION: Transition approved by intelligence agent", category="location_transitions")
+
         # Debug the exact string values for easier troubleshooting
         info(f"STATE_CHANGE: Transitioning from '{current_location_name}' to '{new_location_name_or_id}'", category="location_transitions")
         debug(f"VALIDATION: Current location string (hex): {current_location_name.encode('utf-8').hex()}", category="location_transitions")

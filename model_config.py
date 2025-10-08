@@ -27,6 +27,10 @@ MONSTER_BUILDER_MODEL = "gpt-4.1-2025-04-14"
 ENCOUNTER_UPDATE_MODEL = "gpt-4.1-mini-2025-04-14"
 LEVEL_UP_MODEL = "gpt-4.1-2025-04-14"                  # Used in level_up.py
 
+# --- Transition Validation Model ---
+TRANSITION_VALIDATOR_MODEL = "gpt-4.1-mini-2025-04-14"  # Used in transition_validator.py
+TRANSITION_VALIDATOR_TEMPERATURE = 0.3                   # Low temp for analytical reasoning
+
 # --- Token Optimization Models ---
 DM_MINI_MODEL = "gpt-4.1-mini-2025-04-14"              # Used for simple conversations and plot-only updates
 DM_FULL_MODEL = "gpt-4.1-2025-04-14"                   # Used for complex actions requiring JSON operations
