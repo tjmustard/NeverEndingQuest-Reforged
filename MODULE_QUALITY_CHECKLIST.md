@@ -195,6 +195,99 @@ This checklist ensures NeverEndingQuest modules are mechanically sound, narrativ
 - [ ] **Example issue:** "last seen near the old barn" but no location named "Old Barn" or "Barn of Offerings"
 - [ ] **Fix:** Either add the missing location OR change narrative to reference existing location names
 
+### Plot Hook Sequential Progression ⚠️ CRITICAL
+**Plot hooks must guide players through areas in sequential order matching plot point progression.**
+
+#### The Core Issue
+When plot hooks in early areas reference late-game locations, level 1 players skip critical narrative progression and arrive unprepared at high-level content.
+
+#### Validation Rules
+- [ ] Plot hooks in PP001-PP002 areas reference ONLY next 1-2 plot point areas
+- [ ] Plot hooks in starting areas do NOT mention: final boss lairs, endgame artifacts, climax locations
+- [ ] Plot hooks in mid-game areas do NOT point backward to starting areas
+- [ ] Each area's plot hooks create breadcrumb trail to the NEXT sequential area
+- [ ] No plot hook skips more than 1 plot point ahead
+- [ ] Area danger escalation matches plot hook references (low→medium→high→boss)
+
+#### Sequential Progression Pattern
+```
+Area for PP001 (Starting)
+  └─> Plot hooks mention: PP002 areas (immediate next step)
+  └─> Do NOT mention: PP005+ areas (endgame locations)
+
+Area for PP002 (Early Investigation)
+  └─> Plot hooks mention: PP003 areas (next investigation site)
+  └─> Do NOT mention: PP001 areas (backward) or PP006+ (too far ahead)
+
+Area for PP003-PP004 (Mid-game)
+  └─> Plot hooks mention: PP005 areas (major discovery site)
+  └─> Do NOT mention: PP001-PP002 (backward) or PP007 (finale)
+
+Area for PP005 (Major Discovery)
+  └─> Plot hooks mention: PP006 areas (penultimate challenge)
+  └─> Do NOT mention: Earlier areas (backward references)
+
+Area for PP006 (Penultimate)
+  └─> Plot hooks mention: PP007 areas (final confrontation)
+  └─> May reference key items/knowledge from PP005
+
+Area for PP007 (Finale)
+  └─> Plot hooks describe final challenge mechanics
+  └─> May reference all previous plot progression
+```
+
+#### Common Violations
+**❌ Starting Area References:**
+- Mentioning graveyards/crypts when those are in PP006
+- Referencing ritual altars when those are in PP005
+- Naming endgame artifacts before players should know they exist
+- Pointing to boss lair locations
+
+**❌ Mid-game Area References:**
+- Pointing back to starting town/village
+- Referencing early NPCs who aren't present
+- Directing players to already-completed areas
+
+#### How to Validate
+```bash
+# 1. Map plot points to areas from module_plot.json
+# Identify which areas correspond to which plot points
+
+# 2. For each area, check plot hooks reference appropriate progression
+grep -h "plotHooks" modules/[Module]/areas/[StartingArea].json -A5
+
+# 3. Look for danger mismatches (safe area mentioning deadly locations)
+# 4. Check for backward progression (mid-game pointing to start)
+# 5. Verify endgame locations only mentioned in late-game areas
+```
+
+#### Fix Pattern
+When plot hook violates sequential progression:
+
+1. **Identify current plot point** for the area
+2. **Find next plot point** in sequence
+3. **Replace reference** with location from next plot point's area
+4. **Maintain narrative tone** while fixing geography
+
+**Generic Fix Examples:**
+```diff
+Starting Area (PP001):
+- "Visit the [endgame location]"
++ "Investigate the [PP002 location]"
+
+- "Seek the [key artifact from PP005]"
++ "Strange reports from [PP002 area]"
+
+Mid-game Area (PP004):
+- "Return to [starting village]"
++ "Trail leads to [PP005 area]"
+```
+
+#### Why This Matters
+- **Narrative:** Preserves mystery, pacing, and story revelation order
+- **Mechanical:** Ensures level-appropriate challenges (no level 1 at boss)
+- **Player Experience:** Clear progression, proper difficulty curve, earned victories
+
 ---
 
 ## 5. ENCOUNTER BALANCE
@@ -509,3 +602,9 @@ grep -h '"name":' modules/[ModuleName]/areas/*.json | grep -B2 '"attitude"' | gr
   - Added validation method to distinguish quest rewards from missing items
   - Added common false positives section with examples
   - Validated against Thornwood Watch actual playthrough data
+- v1.3 (2025-10-06): Added Plot Hook Sequential Progression validation (Section 4)
+  - Added critical check for plot hooks referencing areas in correct sequence
+  - Prevents early areas from pointing to endgame locations
+  - Ensures narrative progression follows PP001→PP002→...→PP007 pattern
+  - Generic, module-agnostic validation rules and fix patterns
+  - Prevents level 1 players from skipping to endgame content
