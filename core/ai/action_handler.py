@@ -187,6 +187,9 @@ def pre_validate_transition(parameters, party_tracker_data, conversation_history
                 break
 
         # Call transition intelligence agent
+        info(f"TRANSITION AGENT: Validating travel request {current_location_id} -> {new_location_id}", category="transition_validation")
+        print(f"[TRANSITION AGENT] Analyzing path: {current_location_id} -> {new_location_id}")
+
         transition_result = validate_transition_request(
             player_request=player_request,
             current_location_id=current_location_id,
@@ -201,6 +204,11 @@ def pre_validate_transition(parameters, party_tracker_data, conversation_history
             party_level=party_level
         )
 
+        # Log agent decision
+        agent_decision = "APPROVED" if transition_result.get("approved", True) else "BLOCKED"
+        print(f"[TRANSITION AGENT] Decision: {agent_decision}")
+        info(f"TRANSITION AGENT: {agent_decision} - {transition_result.get('reason', 'No reason')}", category="transition_validation")
+
         # Check if approved
         if not transition_result.get("approved", True):
             # Build error message with explicit instructions
@@ -210,12 +218,24 @@ def pre_validate_transition(parameters, party_tracker_data, conversation_history
             narrative_guidance = transition_result.get("narrative_guidance", "")
             requires_encounter = transition_result.get("requires_encounter", False)
 
-            error_msg = f"Travel Blocked: {reason}\n\n"
-            error_msg += f"REQUIRED ACTION: You must revise your response to:\n"
-            error_msg += f"1. Stop the party at {stop_location} ({stop_location_name})\n"
-            error_msg += f"2. Use transitionLocation action with newLocation: \"{stop_location}\"\n"
-            error_msg += f"3. DO NOT use createEncounter action - let the player arrive and explore first\n"
-            error_msg += f"4. Describe the arrival at this location, set the scene, and prompt player for action\n"
+            # Check if stop location is the current location
+            if stop_location == current_location_id:
+                # Already at the blocking location - don't use transitionLocation
+                error_msg = f"Travel Blocked: {reason}\n\n"
+                error_msg += f"REQUIRED ACTION: You must revise your response to:\n"
+                error_msg += f"1. The party is already at {stop_location} ({stop_location_name})\n"
+                error_msg += f"2. DO NOT use transitionLocation (already at this location)\n"
+                error_msg += f"3. Narrate that the path forward/backward is blocked by the encounter\n"
+                error_msg += f"4. Describe the blocking encounter appearing, set scene, prompt player for action\n"
+                error_msg += f"5. Player must resolve this encounter before they can continue traveling\n"
+            else:
+                # Need to stop at a different location
+                error_msg = f"Travel Blocked: {reason}\n\n"
+                error_msg += f"REQUIRED ACTION: You must revise your response to:\n"
+                error_msg += f"1. Stop the party at {stop_location} ({stop_location_name})\n"
+                error_msg += f"2. Use transitionLocation action with newLocation: \"{stop_location}\"\n"
+                error_msg += f"3. DO NOT use createEncounter action - let the player arrive and explore first\n"
+                error_msg += f"4. Describe the arrival at this location, set the scene, and prompt player for action\n"
 
             if requires_encounter:
                 error_msg += f"\nNOTE: This location has a potential encounter, but wait for player interaction before triggering it.\n"
