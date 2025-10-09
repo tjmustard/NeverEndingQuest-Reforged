@@ -99,12 +99,18 @@ def analyze_path_for_encounters(
                         monsters = location.get('monsters', [])
                         encounters = location.get('encounters', [])
                         has_monsters = len(monsters) > 0
-                        has_encounter_entries = len(encounters) > 0
+
+                        # Check for GAMEPLAY encounters (have encounterId key)
+                        # Template encounters (type/description) don't count as visited
+                        has_encounter_entries = any(
+                            isinstance(e, dict) and 'encounterId' in e
+                            for e in encounters
+                        )
                         break
 
         # Check exploration status
-        # If encounters array has entries, location has been visited (combat occurred)
-        # Empty encounters array = not yet explored
+        # If encounters array has GAMEPLAY entries (with encounterId), location visited
+        # Template encounters (type/description) or empty array = not yet explored
         is_visited = has_encounter_entries
         status = "visited" if is_visited else "unexplored"
 

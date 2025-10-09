@@ -74,13 +74,19 @@ def build_transition_atlas(location_graph, module_name: str) -> str:
                         monsters = location.get('monsters', [])
                         encounters = location.get('encounters', [])
                         has_monsters = len(monsters) > 0
-                        has_encounter_entries = len(encounters) > 0
+
+                        # Check for GAMEPLAY encounters (have encounterId key)
+                        # Template encounters (type/description) don't count as visited
+                        has_encounter_entries = any(
+                            isinstance(e, dict) and 'encounterId' in e
+                            for e in encounters
+                        )
                         monster_names = [m.get('name', 'Unknown') for m in monsters if isinstance(m, dict)]
                         break
 
         # Determine visited status
-        # If encounters array has entries = location visited (combat occurred)
-        # Empty encounters array = not yet visited
+        # If encounters array has GAMEPLAY entries (with encounterId), location visited
+        # Template encounters (type/description) or empty array = not yet explored
         is_visited = has_encounter_entries
 
         # Determine status marker
