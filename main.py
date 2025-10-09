@@ -3355,6 +3355,21 @@ def main_game_loop():
                 # Check if any action is transitionLocation
                 for action in actions:
                     if isinstance(action, dict) and action.get("action") == "transitionLocation":
+                        # Quick check: Reject same-location transitions immediately (no agent needed)
+                        new_location = action.get("parameters", {}).get("newLocation", "")
+                        current_location_id = party_tracker_data["worldConditions"]["currentLocationId"]
+
+                        if new_location == current_location_id:
+                            # Same location transition - immediate reject without calling agent
+                            conversation_history.append({
+                                "role": "user",
+                                "content": f"Error Note: Cannot transition from {current_location_id} to itself. The party is already at this location. Either roleplay the current scene without transitioning, or clarify where the player actually wants to go. Please adjust your response accordingly."
+                            })
+                            retry_count += 1
+                            transition_check_passed = False
+                            info(f"VALIDATION: Same-location transition blocked ({current_location_id} -> {new_location})", category="location_transitions")
+                            break
+
                         # Found transitionLocation - call transition intelligence agent
                         from core.ai.action_handler import pre_validate_transition
 

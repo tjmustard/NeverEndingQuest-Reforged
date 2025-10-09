@@ -214,9 +214,11 @@ def pre_validate_transition(parameters, party_tracker_data, conversation_history
             error_msg += f"REQUIRED ACTION: You must revise your response to:\n"
             error_msg += f"1. Stop the party at {stop_location} ({stop_location_name})\n"
             error_msg += f"2. Use transitionLocation action with newLocation: \"{stop_location}\"\n"
+            error_msg += f"3. DO NOT use createEncounter action - let the player arrive and explore first\n"
+            error_msg += f"4. Describe the arrival at this location, set the scene, and prompt player for action\n"
 
             if requires_encounter:
-                error_msg += f"3. Trigger the encounter at this location (use createEncounter if combat)\n"
+                error_msg += f"\nNOTE: This location has a potential encounter, but wait for player interaction before triggering it.\n"
 
             error_msg += f"\nNARRATIVE GUIDANCE:\n{narrative_guidance}"
 
