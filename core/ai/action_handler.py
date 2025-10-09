@@ -879,6 +879,22 @@ def process_action(action, party_tracker_data, location_data, conversation_histo
         # Transition approved by intelligence agent
         info("VALIDATION: Transition approved by intelligence agent", category="location_transitions")
 
+        # Inject approval notice into conversation for validator context
+        transition_approval_notice = {
+            "role": "system",
+            "content": (
+                f"Transition Intelligence Pre-Validation: APPROVED\n"
+                f"  Path validated: {current_location_id} -> {new_location_name_or_id}\n"
+                f"  Path segments: {' -> '.join(path)}\n"
+                f"  Encounter blocking: Checked (no unexplored monsters blocking path)\n"
+                f"  Plot progression: Reviewed\n"
+                f"  Validator: Path already validated by transition agent. "
+                f"Focus on action format correctness, hallucinations, and combat rules only."
+            )
+        }
+        conversation_history.append(transition_approval_notice)
+        debug("VALIDATION: Added transition approval notice to conversation history", category="location_transitions")
+
         # Debug the exact string values for easier troubleshooting
         info(f"STATE_CHANGE: Transitioning from '{current_location_name}' to '{new_location_name_or_id}'", category="location_transitions")
         debug(f"VALIDATION: Current location string (hex): {current_location_name.encode('utf-8').hex()}", category="location_transitions")
