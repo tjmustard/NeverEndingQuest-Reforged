@@ -849,12 +849,23 @@ def process_action(action, party_tracker_data, location_data, conversation_histo
             # Travel blocked - return narrative guidance to main DM
             narrative_guidance = transition_result.get("narrative_guidance", "")
             stop_location = transition_result.get("stop_location", "")
+            stop_location_name = transition_result.get("stop_location_name", "Unknown")
             reason = transition_result.get("reason", "Unknown")
+            requires_encounter = transition_result.get("requires_encounter", False)
 
-            error_msg = f"Travel Blocked: {reason}\n\n{narrative_guidance}"
+            # Build explicit instructions for main DM AI
+            error_msg = f"Travel Blocked: {reason}\n\n"
+            error_msg += f"REQUIRED ACTION: You must revise your response to:\n"
+            error_msg += f"1. Stop the party at {stop_location} ({stop_location_name})\n"
+            error_msg += f"2. Use transitionLocation action with newLocation: \"{stop_location}\"\n"
+
+            if requires_encounter:
+                error_msg += f"3. Trigger the encounter at this location (use createEncounter if combat)\n"
+
+            error_msg += f"\nNARRATIVE GUIDANCE:\n{narrative_guidance}"
 
             if transition_result.get("plot_guidance"):
-                error_msg += f"\n\nPlot Guidance: {transition_result['plot_guidance']}"
+                error_msg += f"\n\nPLOT GUIDANCE: {transition_result['plot_guidance']}"
 
             info(f"VALIDATION: Transition blocked by intelligence agent at {stop_location}", category="location_transitions")
             print(f"TRANSITION BLOCKED: {reason}")
