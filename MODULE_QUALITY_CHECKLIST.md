@@ -320,6 +320,36 @@ Mid-game Area (PP004):
 - [ ] BU (backup) files exist for all critical files
 - [ ] Old backup files moved to `old_backups/` or `archived_areas_*/`
 
+### Template File Integrity (BU Files) ⚠️ CRITICAL
+**BU files are clean templates and MUST NOT contain pre-populated gameplay data.**
+
+- [ ] ALL locations in BU files have `"encounters": []` (empty array)
+- [ ] ALL locations in BU files have `"adventureSummary": ""` (empty string)
+- [ ] No encounter objects with encounterId/summary in BU files
+- [ ] No pre-written adventureSummary text in BU files
+
+**Why This Matters:**
+- encounters array: Populated when player visits location (records what happened)
+- adventureSummary: AI-generated summary when player leaves location after events
+- Empty = unexplored/template, Has entries = visited/gameplay occurred
+- Transition intelligence system uses this to detect visited vs unexplored locations
+
+**Validation Commands:**
+```bash
+# Detect non-empty encounters in BU files
+grep -h '"encounters"' modules/[Module]/areas/*_BU.json | grep -v '\[\]'
+
+# Detect non-empty adventureSummary in BU files
+grep -h '"adventureSummary"' modules/[Module]/areas/*_BU.json | grep -v '""'
+```
+
+**If violations found:** BU files were incorrectly generated with pre-populated data. Fix with:
+```python
+for location in area_data['locations']:
+    location['encounters'] = []
+    location['adventureSummary'] = ""
+```
+
 ### Schema Compliance
 - [ ] All NPCs follow: `{name, description, attitude}` (all required)
 - [ ] All monsters follow: `{name, quantity: {min, max}}` (quantity required per schema)
