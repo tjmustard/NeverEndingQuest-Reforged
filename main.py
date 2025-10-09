@@ -3344,6 +3344,46 @@ def main_game_loop():
         while retry_count < 5 and not valid_response_received:
             # Pass validation retry count for intelligent model escalation
             ai_response_content = get_ai_response(conversation_history, validation_retry_count=retry_count)
+
+            # PRE-VALIDATION: Check for transitionLocation and call transition intelligence agent
+            transition_check_passed = True
+            try:
+                import json
+                response_data = json.loads(ai_response_content)
+                actions = response_data.get("actions", [])
+
+                # Check if any action is transitionLocation
+                for action in actions:
+                    if isinstance(action, dict) and action.get("action") == "transitionLocation":
+                        # Found transitionLocation - call transition intelligence agent
+                        from core.ai.action_handler import pre_validate_transition
+
+                        transition_approved, transition_error = pre_validate_transition(
+                            action.get("parameters", {}),
+                            party_tracker_data,
+                            conversation_history,
+                            location_graph,
+                            path_manager
+                        )
+
+                        if not transition_approved:
+                            # Transition blocked - append error and retry
+                            conversation_history.append({
+                                "role": "user",
+                                "content": f"Error Note: {transition_error}. Please adjust your response accordingly."
+                            })
+                            retry_count += 1
+                            transition_check_passed = False
+                            info(f"VALIDATION: Transition blocked by intelligence agent, retry {retry_count}", category="location_transitions")
+                            break  # Don't check other actions, retry immediately
+
+            except (json.JSONDecodeError, Exception) as e:
+                # If we can't parse the response, let the normal validator handle it
+                debug(f"Could not pre-validate transition: {e}", category="location_transitions")
+
+            if not transition_check_passed:
+                continue  # Skip to next retry iteration
+
             validation_result = validate_ai_response(ai_response_content, user_input_text, validation_prompt_text, conversation_history, party_tracker_data)
         
             # Unpack the validation result tuple
