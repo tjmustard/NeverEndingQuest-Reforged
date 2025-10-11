@@ -5855,7 +5855,7 @@
                 // Add special handling for enemy monsters with media assets
                 if (combatant.type === 'enemy' && combatant.monsterType) {
                     // Use the monsterType field for lookup
-                    const monsterType = combatant.monsterType.toLowerCase();
+                    const monsterType = combatant.monsterType.toLowerCase().replace(/\s+/g, '_');
                     // Use new smart media endpoint that checks module folder first
                     const monsterThumbUrl = `/media/monsters/${monsterType}_thumb.jpg`;
                     const monsterVideoUrl = `/media/monsters/${monsterType}_video.mp4`;
