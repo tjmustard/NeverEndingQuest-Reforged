@@ -158,6 +158,27 @@ def pre_validate_transition(parameters, party_tracker_data, conversation_history
         current_module = party_tracker_data.get("module", "").replace(" ", "_")
         path_analysis = analyze_path_for_encounters(path, location_graph, current_module)
 
+        # RETREAT DETECTION: Check if this is a legitimate retreat vs fast-travel exploit
+        future_segments = [
+            seg for seg in path_analysis['path_segments']
+            if seg['location_id'] != current_location_id
+        ]
+
+        # Check if ALL future locations are visited (retreat to safety)
+        all_visited = all(seg['status'] == 'visited' for seg in future_segments) if future_segments else False
+
+        # Check if ANY future locations have unexplored monsters
+        has_unexplored_monsters = any(
+            seg['status'] == 'unexplored' and seg['has_monsters']
+            for seg in future_segments
+        )
+
+        # ALLOW RETREAT: If all future locations are visited, this is a tactical retreat
+        if all_visited:
+            # Player fleeing through cleared areas - ALLOW even if current location has monsters
+            debug(f"RETREAT DETECTED: All future locations visited, allowing tactical retreat", category="transition_validation")
+            return True, ""  # Approve immediately, skip agent call
+
         # Build transition atlas
         transition_atlas = build_transition_atlas(location_graph, current_module)
 
@@ -187,8 +208,8 @@ def pre_validate_transition(parameters, party_tracker_data, conversation_history
                 break
 
         # Call transition intelligence agent
+        print(f"DEBUG: [TRANSITION AGENT] Checking travel: {current_location_id} -> {new_location_id}")
         info(f"TRANSITION AGENT: Validating travel request {current_location_id} -> {new_location_id}", category="transition_validation")
-        print(f"[TRANSITION AGENT] Analyzing path: {current_location_id} -> {new_location_id}")
 
         transition_result = validate_transition_request(
             player_request=player_request,
