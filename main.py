@@ -3352,6 +3352,13 @@ def main_game_loop():
                 response_data = json.loads(ai_response_content)
                 actions = response_data.get("actions", [])
 
+                # Debug: Show what actions AI sent before any processing
+                if actions:
+                    action_list = [a.get("action") if isinstance(a, dict) else str(a) for a in actions]
+                    print(f"DEBUG: [AI RESPONSE] Actions received: {action_list}")
+                else:
+                    print(f"DEBUG: [AI RESPONSE] No actions in response")
+
                 current_module = party_tracker_data.get("module", "")
                 actions_modified = False
 
