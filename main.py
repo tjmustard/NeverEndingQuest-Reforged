@@ -266,8 +266,8 @@ def check_and_inject_return_message(conversation_history, is_combat_active=False
     
     # Normal (non-combat) resume message injection
     return_message = {
-        "role": "user", 
-        "content": "Dungeon Master Note: Resume the game, the player has returned. Welcome the player back warmly. Have the party members acknowledge their return with brief in-character reactions. Provide a concise atmospheric recap of the immediate situation and surroundings, then naturally prompt for the player's next action while maintaining immersion in the ongoing narrative."
+        "role": "user",
+        "content": "Dungeon Master Note: Resume the game, the player has returned. Welcome the player back warmly. Have the party members acknowledge their return with brief in-character reactions. Provide a concise atmospheric recap of the immediate situation and surroundings, then naturally prompt for the player's next action while maintaining immersion in the ongoing narrative. IMPORTANT: Do NOT use transitionLocation action - the party is already at their current location. Just provide narrative and prompts."
     }
     conversation_history.append(return_message)
     debug("STATE_CHANGE: Injected 'player has returned' message at startup", category="session_management")
