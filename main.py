@@ -3345,11 +3345,60 @@ def main_game_loop():
             # Pass validation retry count for intelligent model escalation
             ai_response_content = get_ai_response(conversation_history, validation_retry_count=retry_count)
 
+            # PRE-PROCESSING: Fix incorrect updatePartyTracker usage for within-module travel
+            # This must happen BEFORE any validation to prevent wrong action from being checked
+            try:
+                import json
+                response_data = json.loads(ai_response_content)
+                actions = response_data.get("actions", [])
+
+                current_module = party_tracker_data.get("module", "")
+                actions_modified = False
+
+                # Check for updatePartyTracker being used for within-module location changes
+                for i, action in enumerate(actions):
+                    if isinstance(action, dict) and action.get("action") == "updatePartyTracker":
+                        params = action.get("parameters", {})
+
+                        # Check if this is a location transition (has currentLocationId) vs party composition change
+                        has_location_id = "currentLocationId" in params
+                        has_module = "module" in params
+
+                        if has_location_id and has_module:
+                            # Check if module is the SAME as current module (within-module travel)
+                            target_module = params.get("module", "")
+
+                            if target_module == current_module:
+                                # WRONG ACTION: Using updatePartyTracker for within-module travel
+                                # Convert to transitionLocation
+                                new_location_id = params.get("currentLocationId", "")
+
+                                print(f"DEBUG: [ACTION FIX] Converting updatePartyTracker to transitionLocation({new_location_id}) - same module")
+                                info(f"ACTION FIX: Converted updatePartyTracker to transitionLocation for within-module travel", category="action_preprocessing")
+
+                                # Replace with transitionLocation
+                                actions[i] = {
+                                    "action": "transitionLocation",
+                                    "parameters": {
+                                        "newLocation": new_location_id
+                                    }
+                                }
+                                actions_modified = True
+
+                # Update response if we modified actions
+                if actions_modified:
+                    response_data['actions'] = actions
+                    ai_response_content = json.dumps(response_data)
+                    info(f"ACTION FIX: Updated response with corrected action types", category="action_preprocessing")
+
+            except (json.JSONDecodeError, Exception) as e:
+                debug(f"Could not pre-process actions: {e}", category="action_preprocessing")
+
             # PRE-VALIDATION: Check for transitionLocation and call transition intelligence agent
             transition_check_passed = True
             try:
                 import json
-                response_data = json.loads(ai_response_content)
+                response_data = json.loads(ai_response_content)  # Re-parse in case it was modified
                 actions = response_data.get("actions", [])
 
                 # Check if any action is transitionLocation
