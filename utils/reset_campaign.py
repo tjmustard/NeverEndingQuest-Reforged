@@ -234,8 +234,13 @@ def clear_all_files():
     
     for file in conversation_files:
         if os.path.exists(file):
-            os.remove(file)
-            print(f"  ✓ Deleted {file}")
+            try:
+                os.remove(file)
+                print(f"  ✓ Deleted {file}")
+            except PermissionError:
+                print(f"  ⊘ Skipped {file} (file in use)")
+            except Exception as e:
+                print(f"  ⊘ Could not delete {file}: {e}")
     
     # Debug and log files
     debug_files = [
@@ -251,8 +256,13 @@ def clear_all_files():
     
     for file in debug_files:
         if os.path.exists(file):
-            os.remove(file)
-            print(f"  ✓ Deleted {file}")
+            try:
+                os.remove(file)
+                print(f"  ✓ Deleted {file}")
+            except PermissionError:
+                print(f"  ⊘ Skipped {file} (file in use)")
+            except Exception as e:
+                print(f"  ⊘ Could not delete {file}: {e}")
     
     # Clear combat logs directory
     if os.path.exists("combat_logs"):
