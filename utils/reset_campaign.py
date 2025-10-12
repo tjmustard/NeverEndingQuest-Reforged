@@ -229,7 +229,8 @@ def clear_all_files():
     # Conversation files
     conversation_files = [
         "modules/conversation_history/conversation_history.json", "modules/conversation_history/chat_history.json",
-        "modules/conversation_history/combat_conversation_history.json", "player_conversation_history.json"
+        "modules/conversation_history/combat_conversation_history.json", "player_conversation_history.json",
+        "modules/conversation_history/game_interface_cache.json"
     ]
     
     for file in conversation_files:
