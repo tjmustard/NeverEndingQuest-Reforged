@@ -3360,15 +3360,20 @@ def main_game_loop():
                         current_location_id = party_tracker_data["worldConditions"]["currentLocationId"]
 
                         if new_location == current_location_id:
-                            # Same location transition - immediate reject without calling agent
-                            conversation_history.append({
-                                "role": "user",
-                                "content": f"Error Note: Cannot transition from {current_location_id} to itself. The party is already at this location. Either roleplay the current scene without transitioning, or clarify where the player actually wants to go. Please adjust your response accordingly."
-                            })
-                            retry_count += 1
-                            transition_check_passed = False
-                            info(f"VALIDATION: Same-location transition blocked ({current_location_id} -> {new_location})", category="location_transitions")
-                            break
+                            # Same location transition - STRIP the action instead of retrying
+                            info(f"VALIDATION: Same-location transition detected ({current_location_id}), stripping action", category="location_transitions")
+                            print(f"DEBUG: [SAME-LOCATION] Stripping transitionLocation({current_location_id}) from response")
+
+                            # Remove this action from the actions array
+                            actions.remove(action)
+
+                            # Update the response content with stripped actions
+                            response_data['actions'] = actions
+                            ai_response_content = json.dumps(response_data)
+
+                            # Don't retry - continue with modified response
+                            info(f"VALIDATION: Same-location action stripped, continuing with narration only", category="location_transitions")
+                            break  # Exit action checking loop, proceed to normal validation
 
                         # Found transitionLocation - call transition intelligence agent
                         from core.ai.action_handler import pre_validate_transition
