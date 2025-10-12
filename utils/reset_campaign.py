@@ -47,10 +47,14 @@ def create_backup():
     print(f"\n{CYAN}PHASE 1: Creating complete backup...{RESET}")
     os.makedirs(backup_dir, exist_ok=True)
     
-    # Backup modules directory
+    # Backup modules directory (excluding backups subdirectory to prevent recursion)
     if os.path.exists("modules"):
         print(f"Backing up modules directory...")
-        shutil.copytree("modules", os.path.join(backup_dir, "modules"))
+        def ignore_backups(dir, files):
+            # Ignore the backups directory to prevent recursive backup loops
+            return ['backups'] if os.path.basename(dir) == 'modules' else []
+
+        shutil.copytree("modules", os.path.join(backup_dir, "modules"), ignore=ignore_backups)
     
     # Backup all root game files
     root_files = [
