@@ -359,7 +359,8 @@ def fuzzy_match_character_name(input_name, party_tracker_data):
                 continue
     except Exception as e:
         # debug(f"FUZZY_MATCH: Error searching character files: {str(e)}", category="character_updates")
-    
+        pass
+
     return None
 
 def get_character_path(character_name, character_role=None):
