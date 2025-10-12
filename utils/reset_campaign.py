@@ -270,7 +270,18 @@ def clear_all_files():
     if os.path.exists("combat_logs"):
         shutil.rmtree("combat_logs")
         print("  ✓ Cleared combat_logs directory")
-    
+
+    # Clear companion memories
+    if os.path.exists("data/companion_memories"):
+        shutil.rmtree("data/companion_memories")
+        os.makedirs("data/companion_memories")
+        print("  ✓ Cleared companion memories")
+
+    if os.path.exists("data/companion_memories_compressed"):
+        shutil.rmtree("data/companion_memories_compressed")
+        os.makedirs("data/companion_memories_compressed")
+        print("  ✓ Cleared compressed companion memories")
+
     # Clear campaign archives and summaries
     if os.path.exists("modules/campaign_archives"):
         shutil.rmtree("modules/campaign_archives")
