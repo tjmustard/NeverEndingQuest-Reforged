@@ -6037,8 +6037,23 @@
                         });
                     };
                     videoTest.onerror = () => {
-                        // No video, clicking will do nothing
-                        item.style.cursor = 'default';
+                        // No video, try to show full-size image instead
+                        item.addEventListener('click', (event) => {
+                            // Try full-size NPC portrait
+                            const npcFullUrl = `/media/npcs/${npcFilename}.jpg`;
+                            const fullImg = new Image();
+                            fullImg.onload = () => {
+                                showImagePopup(event.currentTarget, npcFullUrl);
+                            };
+                            fullImg.onerror = () => {
+                                // No full image either, show enlarged thumbnail
+                                if (item.style.backgroundImage) {
+                                    const bgUrl = item.style.backgroundImage.slice(5, -2);
+                                    showImagePopup(event.currentTarget, bgUrl);
+                                }
+                            };
+                            fullImg.src = npcFullUrl;
+                        });
                     };
                     
                     // Silent image validation for fallback
