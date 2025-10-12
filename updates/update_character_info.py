@@ -230,7 +230,7 @@ def find_character_file_fuzzy(character_name):
             if score > best_score:
                 best_score = score
                 best_match = filename
-                debug(f"FUZZY_MATCH: Word subset match '{character_name}' -> '{filename}' (score: {score:.2f})", category="character_updates")
+                # debug(f"FUZZY_MATCH: Word subset match '{character_name}' -> '{filename}' (score: {score:.2f})", category="character_updates")
         
         # Strategy 2: Normalized partial match
         if input_normalized in file_lower.replace("_", " "):
@@ -238,23 +238,23 @@ def find_character_file_fuzzy(character_name):
             if score > best_score:
                 best_score = score
                 best_match = filename
-                debug(f"FUZZY_MATCH: Partial match '{character_name}' -> '{filename}' (score: {score:.2f})", category="character_updates")
+                # debug(f"FUZZY_MATCH: Partial match '{character_name}' -> '{filename}' (score: {score:.2f})", category="character_updates")
         
         # Strategy 3: Sequence matching
         sequence_score = SequenceMatcher(None, input_lower, file_lower).ratio()
         if sequence_score > best_score:
             best_score = sequence_score
             best_match = filename
-            debug(f"FUZZY_MATCH: Sequence match '{character_name}' -> '{filename}' (score: {sequence_score:.2f})", category="character_updates")
+            # debug(f"FUZZY_MATCH: Sequence match '{character_name}' -> '{filename}' (score: {sequence_score:.2f})", category="character_updates")
     
     # Return match if score is high enough
     # Note: Threshold increased from 0.5 to 0.65 to prevent false matches like "Scout Elen" -> "Scout Kira"
     # while still allowing valid matches like "Ranger Thane" -> "corrupted_ranger_thane" (0.667)
     if best_match and best_score >= 0.65:
-        debug(f"FUZZY_MATCH: Best match for '{character_name}' is '{best_match}' (score: {best_score:.2f})", category="character_updates")
+        # debug(f"FUZZY_MATCH: Best match for '{character_name}' is '{best_match}' (score: {best_score:.2f})", category="character_updates")
         return best_match
     else:
-        debug(f"FUZZY_MATCH: No suitable match found for '{character_name}' (best score: {best_score:.2f})", category="character_updates")
+        # debug(f"FUZZY_MATCH: No suitable match found for '{character_name}' (best score: {best_score:.2f})", category="character_updates")
         return None
 
 def detect_character_role(character_name):
@@ -312,26 +312,26 @@ def fuzzy_match_character_name(input_name, party_tracker_data):
         npc_lower = npc_name.lower()
         # Check if input is contained in the NPC name
         if input_lower in npc_lower:
-            debug(f"FUZZY_MATCH: Matched '{input_name}' to '{npc_name}' via partial match", category="character_updates")
+            # debug(f"FUZZY_MATCH: Matched '{input_name}' to '{npc_name}' via partial match", category="character_updates")
             return npc_name
         # Check if any word in NPC name matches input
         npc_words = npc_lower.split()
         if input_lower in npc_words:
-            debug(f"FUZZY_MATCH: Matched '{input_name}' to '{npc_name}' via word match", category="character_updates")
+            # debug(f"FUZZY_MATCH: Matched '{input_name}' to '{npc_name}' via word match", category="character_updates")
             return npc_name
         
         # Check if normalized input matches part of normalized NPC name
         # This handles cases like "ranger_thane" matching "Corrupted Ranger Thane"
         input_normalized = input_lower.replace("_", " ")
         if input_normalized in npc_lower:
-            debug(f"FUZZY_MATCH: Matched '{input_name}' to '{npc_name}' via normalized partial match", category="character_updates")
+            # debug(f"FUZZY_MATCH: Matched '{input_name}' to '{npc_name}' via normalized partial match", category="character_updates")
             return npc_name
         
         # Check each word in the normalized input against the NPC name
         input_words = input_normalized.split()
         for word in input_words:
             if word in npc_lower and len(word) > 2:  # Skip very short words
-                debug(f"FUZZY_MATCH: Matched '{input_name}' to '{npc_name}' via word '{word}'", category="character_updates")
+                # debug(f"FUZZY_MATCH: Matched '{input_name}' to '{npc_name}' via word '{word}'", category="character_updates")
                 return npc_name
     
     # Try checking character files in the module
@@ -353,12 +353,12 @@ def fuzzy_match_character_name(input_name, party_tracker_data):
                         return char_name
                     # Check partial match
                     if input_lower in char_name.lower():
-                        debug(f"FUZZY_MATCH: Matched '{input_name}' to '{char_name}' via file search", category="character_updates")
+                        # debug(f"FUZZY_MATCH: Matched '{input_name}' to '{char_name}' via file search", category="character_updates")
                         return char_name
             except:
                 continue
     except Exception as e:
-        debug(f"FUZZY_MATCH: Error searching character files: {str(e)}", category="character_updates")
+        # debug(f"FUZZY_MATCH: Error searching character files: {str(e)}", category="character_updates")
     
     return None
 
