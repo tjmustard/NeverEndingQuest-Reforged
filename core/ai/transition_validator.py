@@ -157,6 +157,25 @@ at an intermediate location due to unexplored encounters. Respond with JSON only
             ]
         )
 
+        # Log API call
+        try:
+            from utils.api_logger import log_api_call
+            log_api_call(
+                call_type="transition_agent",
+                model=TRANSITION_VALIDATOR_MODEL,
+                request_data={
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_message}
+                    ],
+                    "temperature": TRANSITION_VALIDATOR_TEMPERATURE
+                },
+                response_content=response.choices[0].message.content,
+                usage=response.usage.model_dump() if hasattr(response, 'usage') else None
+            )
+        except Exception as e:
+            debug(f"Failed to log transition agent API call: {e}", category="transition_validation")
+
         # Parse response
         response_text = response.choices[0].message.content.strip()
         debug(f"Transition validator response: {response_text[:200]}...", category="transition_validation")
