@@ -3444,10 +3444,8 @@ def main_game_loop():
 
                         if not transition_approved:
                             # Transition blocked - append error and retry
-                            # CRITICAL: Save the failed assistant response so AI can see what it did wrong
-                            if ai_response_content:
-                                conversation_history.append({"role": "assistant", "content": ai_response_content})
-
+                            # DO NOT save failed assistant response - it teaches AI wrong pattern
+                            # AI only needs Error Note to understand the correction needed
                             conversation_history.append({
                                 "role": "user",
                                 "content": f"Error Note: {transition_error}. Please adjust your response accordingly."
