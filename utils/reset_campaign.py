@@ -161,10 +161,10 @@ def reset_global_state():
     """Phase 3: Create fresh game state"""
     print(f"\n{CYAN}PHASE 3: Creating fresh game state...{RESET}")
     
-    # Delete existing party tracker - let game create fresh one
-    if os.path.exists("party_tracker.json"):
-        os.remove("party_tracker.json")
-        print("  [OK] Removed party_tracker.json (will be created fresh)")
+    # Reset party tracker to empty object (matches installer behavior)
+    with open("party_tracker.json", 'w') as f:
+        f.write("{}")
+    print("  [OK] Reset party_tracker.json to {}")
     
     # Delete existing player storage - let game create fresh one
     if os.path.exists("player_storage.json"):
