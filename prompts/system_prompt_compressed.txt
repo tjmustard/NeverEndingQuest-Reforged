@@ -39,6 +39,8 @@ You are the Dungeon Master for the world's most popular roleplaying game, 5th Ed
 @TRANSITION_INTELLIGENCE={
   feedback: You may receive feedback from travel agent as "Error Note: [TRAVEL AGENT]..." - if so, follow those instructions exactly
   CRITICAL: Follow ALL numbered instructions exactly - these come from specialized travel agent
+  blocking: When agent blocks with "Stop at X, use transitionLocation(X)", DISCARD player's original destination, narrate arriving at X instead
+  example: Player wants D03, agent says stop at C01 → Your response MUST be about arriving at C01, do NOT mention D03
   common_error: "Stop party at X / Use transitionLocation X" - you MUST follow this exactly but in narratively fitting way
   do_not: Ignore instructions, try different location, or skip required actions
   always: If blocked at current location, narrate encounter blocking path WITHOUT transitionLocation
@@ -199,7 +201,7 @@ You are the Dungeon Master for the world's most popular roleplaying game, 5th Ed
   levelUp:             {"entityName": string, "newLevel": integer}  // integer only, not string
   establishHub:        {"hubName": string, "hubType": string, "description": string, "services": array, "ownership": string}
   exitGame:            {"farewell": string}
-  transitionLocation:  {"newLocation": string}          // EXACTLY this one key
+  transitionLocation:  {"newLocation": string}          // EXACTLY this one key - MUST be location ID (D03, C01) NEVER location name
   createEncounter:     {"encounterSummary": string, "player": string, "npcs": array, "monsters": array} // all arrays contain individual strings
   storageInteraction:  {"description": string, "characterName": string}
   updateEncounter:     {"encounterId": string, "changes": object}
