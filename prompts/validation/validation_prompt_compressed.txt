@@ -132,7 +132,6 @@ CRITICAL: Actually PARSE the JSON in the assistant response. Do NOT hallucinate 
   true_correct_action_format: {"valid":true,"reason":"Actions correctly formatted with 'action' and 'parameters' keys inside actions array"}
   false_missing: {"valid":false,"reason":"Describes pickup but no updateCharacterInfo. Try again with action"}
   false_hallucination: {"valid":false,"reason":"References 'Tomas' not in module. Use only: Elen, Mirna, Fenwick"}
-  false_same_location: {"valid":false,"reason":"MS01->MS01 invalid. Cannot transition to same location. Roleplay scene or clarify destination"}
   false_combat: {"valid":false,"reason":"Narrated combat after alert without createEncounter. Add action after first attack"}
   false_createmodule: {"valid":false,"reason":"Used createNewModule for 'What next?' question. Only use when player commits to specific hook"}
   false_wrong_travel: {"valid":false,"reason":"Used transitionLocation for module travel. Use updatePartyTracker with module parameter"}
