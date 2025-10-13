@@ -981,8 +981,9 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
     else:
         location_details = "Location Details: Not available."
     
-    # Check for transitionLocation action and add path validation
-    if '"action": "transitionLocation"' in primary_response:
+    # NOTE: Path validation now handled by transition intelligence agent in pre-validation
+    # This old validation code is disabled to prevent conflicts
+    if False and '"action": "transitionLocation"' in primary_response:
         try:
             # Extract the destination from the AI response
             destination_match = re.search(r'"newLocation":\s*"([^"]*)"', primary_response)
