@@ -29,6 +29,7 @@ CRITICAL: Actually PARSE the JSON in the assistant response. Do NOT hallucinate 
 }
 
 @TRANSITION_NOTE={
+  prevalidation: Travel requests checked by transition intelligence agent BEFORE your response
   handled_by_agent: Path validation and encounter blocking handled by transition intelligence agent
   validator_role: Only check action format correctness, not path validity
   keep_checking: Same-location transitions (X01->X01) still invalid

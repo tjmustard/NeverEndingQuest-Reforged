@@ -242,7 +242,7 @@ def pre_validate_transition(parameters, party_tracker_data, conversation_history
             # Check if stop location is the current location
             if stop_location == current_location_id:
                 # Already at the blocking location - don't use transitionLocation
-                error_msg = f"Travel Blocked: {reason}\n\n"
+                error_msg = f"[TRAVEL AGENT] Travel Blocked: {reason}\n\n"
                 error_msg += f"REQUIRED ACTION: You must revise your response to:\n"
                 error_msg += f"1. The party is already at {stop_location} ({stop_location_name})\n"
                 error_msg += f"2. DO NOT use transitionLocation (already at this location)\n"
@@ -251,7 +251,7 @@ def pre_validate_transition(parameters, party_tracker_data, conversation_history
                 error_msg += f"5. Player must resolve this encounter before they can continue traveling\n"
             else:
                 # Need to stop at a different location
-                error_msg = f"Travel Blocked: {reason}\n\n"
+                error_msg = f"[TRAVEL AGENT] Travel Blocked: {reason}\n\n"
                 error_msg += f"REQUIRED ACTION: You must revise your response to:\n"
                 error_msg += f"1. Stop the party at {stop_location} ({stop_location_name})\n"
                 error_msg += f"2. Use transitionLocation action with newLocation: \"{stop_location}\"\n"
