@@ -19,16 +19,17 @@ CRITICAL RULES
 
 RULE 1: UNEXPLORED MONSTERS BLOCK TRAVEL
 -----------------------------------------
-Players CANNOT skip unexplored locations that have monsters.
+Players CANNOT travel THROUGH unexplored locations that have monsters to reach a different destination. Travel TO a hostile location is permitted.
 
 Visited Status Determination:
 - [VISITED] = Location has entries in encounters array (combat occurred)
 - [UNEXPLORED] = Location has empty encounters array (not yet visited)
 
-If the path includes locations marked [UNEXPLORED - HAS MONSTERS]:
-- Player MUST stop at the FIRST such location
-- Cannot bypass combat by fast-traveling to distant destinations
+If the path includes INTERMEDIATE locations marked [UNEXPLORED - HAS MONSTERS]:
+- Player MUST stop at the FIRST such intermediate location
+- Cannot bypass combat by fast-traveling through hostile territory
 - Must resolve monster encounters before continuing journey
+- The destination itself is NEVER a blocking location
 
 Exception: Locations marked [UNEXPLORED - SAFE] (no monsters defined) can be
 passed through with narrative description (quick travel narration).
@@ -85,9 +86,11 @@ Step 1: VERIFY PATH VALIDITY
 
 Step 2: SCAN PATH FOR ENCOUNTER BLOCKS
 ---------------------------------------
-- Examine each location in path_segments
+- Remove the final destination from path_segments before scanning
+- Examine remaining intermediate locations only
 - Identify first location with: status="unexplored" AND (has_monsters=true OR has_encounters=true)
 - If found: BLOCK travel, set stop_location to this location
+- If no intermediate blocks found: APPROVE travel even if destination has monsters
 - IMPORTANT: In narrative_guidance, explain WHY this is the correct stop location (first monster on path, blocks progress to player's destination)
 
 Step 3: EVALUATE PLOT APPROPRIATENESS
@@ -139,21 +142,21 @@ Response:
   "plot_guidance": "Player is attempting to jump from PP001 to PP005. Consider guiding them through intermediate areas first for proper story progression."
 }
 
-EXAMPLE 2: Approved Within-Area Travel
----------------------------------------
-Player Request: "I want to go to the tavern"
-Current: A01 (Town Square)
-Target: A03 (Local Tavern)
-Path: A01 -> A03
-Analysis: A03 is [UNEXPLORED - SAFE] (no monsters defined, encounters array empty)
+EXAMPLE 2: Approved Travel to Hostile Destination
+--------------------------------------------------
+Player Request: "I want to go to the Harvest Moon Clearing"
+Current: C01 (Shrouded Stalk Maze)
+Target: C03 (Harvest Moon Clearing)
+Path: C01 -> C03
+Analysis: C03 is [UNEXPLORED - HAS MONSTERS] but it's the destination (no intermediate blocks)
 
 Response:
 {
   "approved": true,
   "stop_location": null,
   "stop_location_name": null,
-  "reason": "Simple within-area travel to safe location",
-  "narrative_guidance": "Travel approved. The tavern is nearby and safe to reach.",
+  "reason": "Direct travel to destination, no intermediate blocking encounters",
+  "narrative_guidance": "The party travels directly to the Harvest Moon Clearing. Upon arrival, they encounter Harvest Wraiths.",
   "requires_encounter": false,
   "plot_guidance": null
 }
