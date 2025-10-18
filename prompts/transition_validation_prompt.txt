@@ -86,11 +86,19 @@ Step 1: VERIFY PATH VALIDITY
 
 Step 2: SCAN PATH FOR ENCOUNTER BLOCKS
 ---------------------------------------
-- Remove the final destination from path_segments before scanning
-- Examine remaining intermediate locations only
-- Identify first location with: status="unexplored" AND (has_monsters=true OR has_encounters=true)
-- If found: BLOCK travel, set stop_location to this location
-- If no intermediate blocks found: APPROVE travel even if destination has monsters
+CRITICAL: Only intermediate locations can block travel. The destination NEVER blocks.
+
+If path has only 2 locations (current -> destination):
+  - There are ZERO intermediate locations
+  - APPROVE immediately, even if destination has monsters
+  - Traveling TO a hostile location is how encounters begin
+
+If path has 3+ locations (current -> intermediates -> destination):
+  - Scan only the intermediate locations (exclude first and last)
+  - Identify first intermediate with: status="unexplored" AND has_monsters=true
+  - If found: BLOCK travel, set stop_location to that intermediate
+  - If no intermediate blocks: APPROVE even if destination has monsters
+
 - IMPORTANT: In narrative_guidance, explain WHY this is the correct stop location (first monster on path, blocks progress to player's destination)
 
 Step 3: EVALUATE PLOT APPROPRIATENESS
