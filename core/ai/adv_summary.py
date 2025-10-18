@@ -196,7 +196,7 @@ def update_location_json(adventure_summary, location_info, current_area_id_from_
         {"role": "system", "content": f"""Given an adventure summary and the current location information, update the JSON schema for the corresponding location.
         The location name is "{location_info['name']}" and should not be changed.
         Update all relevant fields based on the events that have occurred, including but not limited to:
-        - IMPORTANT: The 'adventureSummary' field is deprecated. DO NOT include it or modify it in your response.
+        - Update 'adventureSummary' with a brief summary of what occurred at this location (2-3 sentences).
         - Modify 'description' if the location has changed significantly.
         - Update 'npcs', 'monsters', 'resourcesAvailable', 'plotHooks', etc., based on recent events. Be aware of any mispellings of NPCs or monsters and make sure to not create new entities if the player commands it, directs it, or mispells. For example, if the area started with an NPC called Mordenkainen, and the player refers to the NPC as Mordy, don't add Mordy to the NPC list in addition to Mordenkainen.
         - Create a new 'encounter' entry for this update. The encounterId should be the location's locationId (e.g., 'R01', 'R02') appended with '-E' and then the next sequential number (e.g., if locationId is 'R01' and there are 2 existing encounters, the new encounterId should be 'R01-E3'). Do NOT include the area ID prefix.

@@ -47,10 +47,14 @@ def create_backup():
     print(f"\n{CYAN}PHASE 1: Creating complete backup...{RESET}")
     os.makedirs(backup_dir, exist_ok=True)
     
-    # Backup modules directory
+    # Backup modules directory (excluding backups subdirectory to prevent recursion)
     if os.path.exists("modules"):
         print(f"Backing up modules directory...")
-        shutil.copytree("modules", os.path.join(backup_dir, "modules"))
+        def ignore_backups(dir, files):
+            # Ignore the backups directory to prevent recursive backup loops
+            return ['backups'] if os.path.basename(dir) == 'modules' else []
+
+        shutil.copytree("modules", os.path.join(backup_dir, "modules"), ignore=ignore_backups)
     
     # Backup all root game files
     root_files = [
@@ -157,10 +161,10 @@ def reset_global_state():
     """Phase 3: Create fresh game state"""
     print(f"\n{CYAN}PHASE 3: Creating fresh game state...{RESET}")
     
-    # Delete existing party tracker - let game create fresh one
-    if os.path.exists("party_tracker.json"):
-        os.remove("party_tracker.json")
-        print("  [OK] Removed party_tracker.json (will be created fresh)")
+    # Reset party tracker to empty object (matches installer behavior)
+    with open("party_tracker.json", 'w') as f:
+        f.write("{}")
+    print("  [OK] Reset party_tracker.json to {}")
     
     # Delete existing player storage - let game create fresh one
     if os.path.exists("player_storage.json"):
@@ -222,16 +226,23 @@ def clear_all_files():
     """Phase 4: Delete all generated files"""
     print(f"\n{CYAN}PHASE 4: Clearing all generated files...{RESET}")
     
-    # Conversation files
+    # Conversation files and caches
     conversation_files = [
         "modules/conversation_history/conversation_history.json", "modules/conversation_history/chat_history.json",
-        "modules/conversation_history/combat_conversation_history.json", "player_conversation_history.json"
+        "modules/conversation_history/combat_conversation_history.json", "player_conversation_history.json",
+        "modules/conversation_history/game_interface_cache.json", "modules/conversation_history/compression_cache.json",
+        "modules/conversation_history/combat_user_message_cache.json"
     ]
     
     for file in conversation_files:
         if os.path.exists(file):
-            os.remove(file)
-            print(f"  ✓ Deleted {file}")
+            try:
+                os.remove(file)
+                print(f"  ✓ Deleted {file}")
+            except PermissionError:
+                print(f"  ⊘ Skipped {file} (file in use)")
+            except Exception as e:
+                print(f"  ⊘ Could not delete {file}: {e}")
     
     # Debug and log files
     debug_files = [
@@ -247,14 +258,30 @@ def clear_all_files():
     
     for file in debug_files:
         if os.path.exists(file):
-            os.remove(file)
-            print(f"  ✓ Deleted {file}")
+            try:
+                os.remove(file)
+                print(f"  ✓ Deleted {file}")
+            except PermissionError:
+                print(f"  ⊘ Skipped {file} (file in use)")
+            except Exception as e:
+                print(f"  ⊘ Could not delete {file}: {e}")
     
     # Clear combat logs directory
     if os.path.exists("combat_logs"):
         shutil.rmtree("combat_logs")
         print("  ✓ Cleared combat_logs directory")
-    
+
+    # Clear companion memories
+    if os.path.exists("data/companion_memories"):
+        shutil.rmtree("data/companion_memories")
+        os.makedirs("data/companion_memories")
+        print("  ✓ Cleared companion memories")
+
+    if os.path.exists("data/companion_memories_compressed"):
+        shutil.rmtree("data/companion_memories_compressed")
+        os.makedirs("data/companion_memories_compressed")
+        print("  ✓ Cleared compressed companion memories")
+
     # Clear campaign archives and summaries
     if os.path.exists("modules/campaign_archives"):
         shutil.rmtree("modules/campaign_archives")

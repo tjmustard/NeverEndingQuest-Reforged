@@ -15,9 +15,8 @@ CRITICAL: Actually PARSE the JSON in the assistant response. Do NOT hallucinate 
   3:action_validation: Required actions executed properly
   4:user_input_compliance: Match ACTUAL user trigger
   5:spell_slot_validation: Cantrips=no slots; leveled=reduce slots
-  6:path_validation: ONLY valid connected paths; reject "WARNING"/"No valid path"
-  7:same_location_ban: NEVER allow X01->X01 transitions
-  8:combat_initiation: createEncounter IMMEDIATELY at commitment point
+  6:same_location_ban: NEVER allow X01->X01 transitions
+  7:combat_initiation: createEncounter IMMEDIATELY at commitment point
 }
 
 @ANTI_HALLUCINATION={
@@ -29,13 +28,11 @@ CRITICAL: Actually PARSE the JSON in the assistant response. Do NOT hallucinate 
   strict: Only reject truly non-existent NPCs (not in ANY module)
 }
 
-@PATH_COACHING={
-  error_id: State what went wrong
-  ground_truth: List ACTUAL valid connections
-  narrative_fix: Use NPC/environment to explain correct layout
-  player_choice: Ask for valid selection; NEVER pick for player
-  rule: NEVER use location IDs (like L03, V05, B01) in narration - always use descriptive location names
-  CRITICAL: If Path Validation says "VALID PATH FOUND", the path IS valid - accept the transitionLocation
+@TRANSITION_NOTE={
+  prevalidation: Travel requests checked by transition intelligence agent BEFORE your response
+  handled_by_agent: Path validation and encounter blocking handled by transition intelligence agent
+  validator_role: Only check action format correctness, not path validity
+  keep_checking: Same-location transitions (X01->X01) still invalid
 }
 
 @ACTIONS={
@@ -135,8 +132,6 @@ CRITICAL: Actually PARSE the JSON in the assistant response. Do NOT hallucinate 
   true_correct_action_format: {"valid":true,"reason":"Actions correctly formatted with 'action' and 'parameters' keys inside actions array"}
   false_missing: {"valid":false,"reason":"Describes pickup but no updateCharacterInfo. Try again with action"}
   false_hallucination: {"valid":false,"reason":"References 'Tomas' not in module. Use only: Elen, Mirna, Fenwick"}
-  false_path: {"valid":false,"reason":"RO01->TW01 invalid. No path exists. Have NPC explain layout, list valid exits"}
-  false_same_location: {"valid":false,"reason":"MS01->MS01 invalid. Cannot transition to same location. Roleplay scene or clarify destination"}
   false_combat: {"valid":false,"reason":"Narrated combat after alert without createEncounter. Add action after first attack"}
   false_createmodule: {"valid":false,"reason":"Used createNewModule for 'What next?' question. Only use when player commits to specific hook"}
   false_wrong_travel: {"valid":false,"reason":"Used transitionLocation for module travel. Use updatePartyTracker with module parameter"}

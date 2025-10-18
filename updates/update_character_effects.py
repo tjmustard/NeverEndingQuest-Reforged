@@ -510,16 +510,16 @@ if __name__ == "__main__":
     
     # Test various effects
     test_cases = [
-        ("Thane", "gains 5 hit points from Aid spell cast by cleric"),
-        ("Elara", "takes 10 damage from orc's sword"),
-        ("Thane", "strength reduced by 2 from shadow's touch"),
-        ("Brom", "gains +2 AC from Shield of Faith spell"),
-        ("Elara", "gains advantage on strength checks from Enhance Ability"),
-        ("Thane", "poisoned by spider venom for 1 hour"),
-        ("Brom", "gains resistance to fire damage from potion"),
-        ("Elara", "intelligence drained by 3 from mind flayer"),
-        ("Thane", "gains 10 temporary hit points from False Life"),
-        ("Brom", "affected by Slow spell reducing speed and AC")
+        ("TestFighter", "gains 5 hit points from Aid spell cast by cleric"),
+        ("TestWizard", "takes 10 damage from orc's sword"),
+        ("TestFighter", "strength reduced by 2 from shadow's touch"),
+        ("TestCleric", "gains +2 AC from Shield of Faith spell"),
+        ("TestWizard", "gains advantage on strength checks from Enhance Ability"),
+        ("TestFighter", "poisoned by spider venom for 1 hour"),
+        ("TestCleric", "gains resistance to fire damage from potion"),
+        ("TestWizard", "intelligence drained by 3 from mind flayer"),
+        ("TestFighter", "gains 10 temporary hit points from False Life"),
+        ("TestCleric", "affected by Slow spell reducing speed and AC")
     ]
     
     print("\nTesting effect detection:")

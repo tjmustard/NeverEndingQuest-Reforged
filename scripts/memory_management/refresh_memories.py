@@ -8,6 +8,7 @@ import json
 import sys
 from pathlib import Path
 from core.memories.companion_memory import CompanionMemoryManager
+from utils.npc_name_canonicalizer import get_canonical_name
 
 def refresh_all_memories():
     """Process entire journal from scratch, replacing all existing memories"""
@@ -32,31 +33,29 @@ def refresh_all_memories():
     entries = journal_data.get('entries', [])
     print(f"Found {len(entries)} journal entries to process\n")
 
-    # Get party NPCs from party_tracker
-    party_npcs = ['Thane', 'Elen', 'Kira']  # Default companions
+    # Get party NPCs from party_tracker and canonicalize names
+    party_npcs = []
     party_tracker_path = Path('party_tracker.json')
     if party_tracker_path.exists():
         with open(party_tracker_path, 'r') as f:
             party_data = json.load(f)
             party_npc_list = party_data.get('partyNPCs', [])
             if party_npc_list:
-                party_npcs = []
                 for npc in party_npc_list:
                     if isinstance(npc, dict):
                         name = npc.get('name', '')
                     else:
                         name = str(npc)
                     if name:
-                        # Extract actual name (skip titles like "Scout", "Ranger")
-                        parts = name.split()
-                        if len(parts) > 1 and parts[0] in ['Scout', 'Ranger', 'Captain', 'Cleric', 'Priestess']:
-                            # Use second word as name
-                            first_name = parts[1]
-                        else:
-                            # Use first word
-                            first_name = parts[0] if parts else name
-                        if first_name not in party_npcs:
-                            party_npcs.append(first_name)
+                        # Use AI-based name canonicalization (handles all D&D naming conventions)
+                        canonical_name = get_canonical_name(name)
+                        if canonical_name and canonical_name not in party_npcs:
+                            party_npcs.append(canonical_name)
+
+    if not party_npcs:
+        print("ERROR: No party NPCs found in party_tracker.json")
+        print("Please ensure party_tracker.json exists and has partyNPCs defined")
+        return False
 
     print(f"Tracking companions: {', '.join(party_npcs)}")
     print("-" * 40)

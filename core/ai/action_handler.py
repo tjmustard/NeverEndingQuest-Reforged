@@ -112,6 +112,171 @@ ACTION_DELETE_SAVE = "deleteSave"
 # Module conversation segmentation has been moved to conversation_utils.py
 # to work with the regular conversation update cycle
 
+
+def pre_validate_transition(parameters, party_tracker_data, conversation_history, location_graph, path_manager):
+    """
+    Pre-validate a transitionLocation action using the transition intelligence agent.
+    This runs BEFORE the main validator, similar to how validation runs before execution.
+
+    Args:
+        parameters: Action parameters dict with newLocation
+        party_tracker_data: Current party tracker data
+        conversation_history: Current conversation history
+        location_graph: LocationGraph instance
+        path_manager: ModulePathManager instance
+
+    Returns:
+        Tuple (approved: bool, error_message: str)
+        - If approved: (True, "")
+        - If blocked: (False, "Detailed error message with instructions")
+    """
+    from utils.path_encounter_analyzer import analyze_path_for_encounters
+    from core.ai.transition_atlas_builder import build_transition_atlas
+    from core.ai.transition_validator import validate_transition_request
+    from utils.file_operations import safe_read_json
+
+    try:
+        new_location_id = parameters.get("newLocation", "")
+        if not new_location_id:
+            # No location specified, let normal validator handle it
+            return True, ""
+
+        # Get current location from party tracker
+        current_location_id = party_tracker_data["worldConditions"]["currentLocationId"]
+        current_location_name = party_tracker_data["worldConditions"]["currentLocation"]
+        current_area_id = party_tracker_data["worldConditions"]["currentAreaId"]
+        current_area_name = party_tracker_data["worldConditions"]["currentArea"]
+
+        # Get path from location graph
+        success, path, path_message = location_graph.find_path(current_location_id, new_location_id)
+
+        if not success:
+            # Path doesn't exist - let normal validation handle it
+            return True, ""
+
+        # Analyze path for encounters and blocking
+        current_module = party_tracker_data.get("module", "").replace(" ", "_")
+        path_analysis = analyze_path_for_encounters(path, location_graph, current_module)
+
+        # RETREAT DETECTION: Check if this is a legitimate retreat vs fast-travel exploit
+        future_segments = [
+            seg for seg in path_analysis['path_segments']
+            if seg['location_id'] != current_location_id
+        ]
+
+        # Check if ALL future locations are visited (retreat to safety)
+        all_visited = all(seg['status'] == 'visited' for seg in future_segments) if future_segments else False
+
+        # Check if ANY future locations have unexplored monsters
+        has_unexplored_monsters = any(
+            seg['status'] == 'unexplored' and seg['has_monsters']
+            for seg in future_segments
+        )
+
+        # ALLOW RETREAT: If all future locations are visited, this is a tactical retreat
+        if all_visited:
+            # Player fleeing through cleared areas - ALLOW even if current location has monsters
+            debug(f"RETREAT DETECTED: All future locations visited, allowing tactical retreat", category="transition_validation")
+            return True, ""  # Approve immediately, skip agent call
+
+        # Build transition atlas
+        transition_atlas = build_transition_atlas(location_graph, current_module)
+
+        # Load plot data
+        plot_data = safe_read_json(path_manager.get_plot_path()) or {}
+
+        # Get party level
+        party_level = 1
+        if party_tracker_data.get("partyMembers"):
+            try:
+                first_member = party_tracker_data["partyMembers"][0]
+                from updates.update_character_info import normalize_character_name
+                char_name = normalize_character_name(first_member)
+                char_file = path_manager.get_character_path(char_name)
+                if os.path.exists(char_file):
+                    char_data = safe_read_json(char_file)
+                    if char_data:
+                        party_level = char_data.get("level", 1)
+            except Exception:
+                pass
+
+        # Get player request from conversation history
+        player_request = ""
+        for msg in reversed(conversation_history):
+            if msg.get("role") == "user" and not msg.get("content", "").startswith("Error Note:"):
+                player_request = msg.get("content", "")
+                break
+
+        # Call transition intelligence agent
+        print(f"DEBUG: [TRANSITION AGENT] Checking travel: {current_location_id} -> {new_location_id}")
+        info(f"TRANSITION AGENT: Validating travel request {current_location_id} -> {new_location_id}", category="transition_validation")
+
+        transition_result = validate_transition_request(
+            player_request=player_request,
+            current_location_id=current_location_id,
+            current_location_name=current_location_name,
+            current_area_id=current_area_id,
+            current_area_name=current_area_name,
+            target_location_id=new_location_id,
+            path=path,
+            path_analysis=path_analysis,
+            transition_atlas=transition_atlas,
+            plot_data=plot_data,
+            party_level=party_level
+        )
+
+        # Log agent decision
+        agent_decision = "APPROVED" if transition_result.get("approved", True) else "BLOCKED"
+        print(f"[TRANSITION AGENT] Decision: {agent_decision}")
+        info(f"TRANSITION AGENT: {agent_decision} - {transition_result.get('reason', 'No reason')}", category="transition_validation")
+
+        # Check if approved
+        if not transition_result.get("approved", True):
+            # Build error message with explicit instructions
+            stop_location = transition_result.get("stop_location", "")
+            stop_location_name = transition_result.get("stop_location_name", "Unknown")
+            reason = transition_result.get("reason", "Unknown")
+            narrative_guidance = transition_result.get("narrative_guidance", "")
+            requires_encounter = transition_result.get("requires_encounter", False)
+
+            # Check if stop location is the current location
+            if stop_location == current_location_id:
+                # Already at the blocking location - don't use transitionLocation
+                error_msg = f"[TRAVEL AGENT] Travel Blocked: {reason}\n\n"
+                error_msg += f"REQUIRED ACTION: You must revise your response to:\n"
+                error_msg += f"1. The party is already at {stop_location} ({stop_location_name})\n"
+                error_msg += f"2. DO NOT use transitionLocation (already at this location)\n"
+                error_msg += f"3. Narrate that the path forward/backward is blocked by the encounter\n"
+                error_msg += f"4. Describe the blocking encounter appearing, set scene, prompt player for action\n"
+                error_msg += f"5. Player must resolve this encounter before they can continue traveling\n"
+            else:
+                # Need to stop at a different location
+                error_msg = f"[TRAVEL AGENT] Travel Blocked: {reason}\n\n"
+                error_msg += f"REQUIRED ACTION: You must revise your response to:\n"
+                error_msg += f"1. Stop the party at {stop_location} ({stop_location_name})\n"
+                error_msg += f"2. Use transitionLocation action with newLocation: \"{stop_location}\"\n"
+                error_msg += f"3. DO NOT use createEncounter action - let the player arrive and explore first\n"
+                error_msg += f"4. Describe the arrival at this location, set the scene, and prompt player for action\n"
+
+            if requires_encounter:
+                error_msg += f"\nNOTE: This location has a potential encounter, but wait for player interaction before triggering it.\n"
+
+            error_msg += f"\nNARRATIVE GUIDANCE:\n{narrative_guidance}"
+
+            if transition_result.get("plot_guidance"):
+                error_msg += f"\n\nPLOT GUIDANCE: {transition_result['plot_guidance']}"
+
+            return False, error_msg
+
+        # Approved - return success
+        return True, ""
+
+    except Exception as e:
+        # On error, allow normal validation to proceed
+        debug(f"Transition pre-validation error: {e}", category="location_transitions")
+        return True, ""
+
+
 def validate_location_transition(location_graph, current_location_id, destination_location_id):
     """
     Validate that a location transition is possible using the location graph.
@@ -770,11 +935,15 @@ def process_action(action, party_tracker_data, location_data, conversation_histo
             # Original error for non-module path issues
             print(f"ERROR: {error_message}")
             return create_return(
-                status="error", 
+                status="error",
                 needs_update=False,
                 response_data={"error_message": f"Path Validation: {error_message}"}
             )
-        
+
+        # NOTE: Transition intelligence agent now runs in PRE-VALIDATION (main.py)
+        # before this action handler is called. If we reach here, the transition
+        # was already approved by the agent.
+
         # Debug the exact string values for easier troubleshooting
         info(f"STATE_CHANGE: Transitioning from '{current_location_name}' to '{new_location_name_or_id}'", category="location_transitions")
         debug(f"VALIDATION: Current location string (hex): {current_location_name.encode('utf-8').hex()}", category="location_transitions")
@@ -803,7 +972,7 @@ def process_action(action, party_tracker_data, location_data, conversation_histo
                 # Fallback to original format if we can't get the IDs
                 conversation_history.append({"role": "user", "content": f"Location transition: {sanitize_text(current_location_name)} to {sanitize_text(new_location_name_or_id)}"})
             
-            # Save conversation history immediately after adding transition
+            # Save conversation history immediately after adding transition marker
             import sys
 
             if __name__ != "__main__":
@@ -812,14 +981,38 @@ def process_action(action, party_tracker_data, location_data, conversation_histo
 
             from main import save_conversation_history
             save_conversation_history(conversation_history)
-            
-            # Check for any missing summaries after the transition
-            from core.ai import cumulative_summary
-            conversation_history = cumulative_summary.check_and_compact_missing_summaries(
-                conversation_history, 
-                party_tracker_data
-            )
-            save_conversation_history(conversation_history)
+
+            # GENERATE TRANSITION NARRATION using the transition_prompt
+            info("STATE_CHANGE: Generating transition narration using AI", category="location_transitions")
+            try:
+                client = OpenAI(api_key=config.OPENAI_API_KEY)
+
+                # Build prompt for transition narration
+                transition_messages = [
+                    {"role": "system", "content": "You are a skilled Dungeon Master narrating a location transition."},
+                    {"role": "user", "content": transition_prompt}
+                ]
+
+                transition_response = client.chat.completions.create(
+                    model=config.DM_MAIN_MODEL,
+                    messages=transition_messages,
+                    temperature=0.7
+                )
+
+                transition_narration = transition_response.choices[0].message.content.strip()
+                info("SUCCESS: Transition narration generated", category="location_transitions")
+
+                # Save transition narration to conversation history as assistant message
+                conversation_history.append({"role": "assistant", "content": transition_narration})
+                save_conversation_history(conversation_history)
+                debug("SUCCESS: Transition narration saved to conversation history", category="location_transitions")
+
+            except Exception as e:
+                error(f"FAILURE: Failed to generate transition narration", exception=e, category="location_transitions")
+                transition_narration = f"The party travels to {new_location_name}."
+                # Save fallback narration too
+                conversation_history.append({"role": "assistant", "content": transition_narration})
+                save_conversation_history(conversation_history)
             
             # CAMPAIGN INTEGRATION: Check for cross-module transitions
             try:

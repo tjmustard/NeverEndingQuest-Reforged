@@ -266,8 +266,8 @@ def check_and_inject_return_message(conversation_history, is_combat_active=False
     
     # Normal (non-combat) resume message injection
     return_message = {
-        "role": "user", 
-        "content": "Dungeon Master Note: Resume the game, the player has returned. Welcome the player back warmly. Have the party members acknowledge their return with brief in-character reactions. Provide a concise atmospheric recap of the immediate situation and surroundings, then naturally prompt for the player's next action while maintaining immersion in the ongoing narrative."
+        "role": "user",
+        "content": "Dungeon Master Note: Resume the game, the player has returned. Welcome the player back warmly. Have the party members acknowledge their return with brief in-character reactions. Provide a concise atmospheric recap of the immediate situation and surroundings, then naturally prompt for the player's next action while maintaining immersion in the ongoing narrative. IMPORTANT: Do NOT use transitionLocation action - the party is already at their current location. Just provide narrative and prompts."
     }
     conversation_history.append(return_message)
     debug("STATE_CHANGE: Injected 'player has returned' message at startup", category="session_management")
@@ -981,8 +981,9 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
     else:
         location_details = "Location Details: Not available."
     
-    # Check for transitionLocation action and add path validation
-    if '"action": "transitionLocation"' in primary_response:
+    # NOTE: Path validation now handled by transition intelligence agent in pre-validation
+    # This old validation code is disabled to prevent conflicts
+    if False and '"action": "transitionLocation"' in primary_response:
         try:
             # Extract the destination from the AI response
             destination_match = re.search(r'"newLocation":\s*"([^"]*)"', primary_response)
@@ -1851,7 +1852,12 @@ def process_ai_response(response, party_tracker_data, location_data, conversatio
         # If it's a transition, handle it with the special two-step process
         if is_transition:
             debug("STATE_CHANGE: Transition action detected. Holding departure narration.", category="location_transitions")
-            
+
+            # SURGICAL FIX: Save pre-transition response to history before processing action
+            conversation_history.append({"role": "assistant", "content": response})
+            save_conversation_history(conversation_history)
+            debug("SUCCESS: Pre-transition assistant message saved to history", category="location_transitions")
+
             # Step 1: Process actions to update state (summary, party_tracker, etc.)
             actions_processed = False
             for action in parsed_response.get("actions", []):
@@ -1891,15 +1897,17 @@ def process_ai_response(response, party_tracker_data, location_data, conversatio
             print(colored("Dungeon Master:", "blue"), colored(full_narration, "blue"))
             # <--- END OF MODIFIED SECTION --->
 
-            # Step 6: Add the final combined narration to history as a single, clean message.
-            for i in range(len(conversation_history) - 1, -1, -1):
-                if conversation_history[i].get("role") == "assistant":
-                    conversation_history[i]['content'] = json.dumps({"narration": full_narration, "actions": []}) # Actions already processed
-                    debug("SUCCESS: Replaced last assistant message with combined transition narration.", category="location_transitions")
+            # Step 6: Replace the raw transition narration with the seamless version in history
+            # This ensures conversation history matches what the player saw
+            fresh_conversation_history = load_json_file(json_file) or []
+            for i in range(len(fresh_conversation_history) - 1, -1, -1):
+                if fresh_conversation_history[i].get("role") == "assistant":
+                    fresh_conversation_history[i]['content'] = full_narration
+                    debug("SUCCESS: Replaced raw transition narration with seamless version in history", category="location_transitions")
                     break
-            
-            save_conversation_history(conversation_history)
-            
+
+            save_conversation_history(fresh_conversation_history)
+
             return {"role": "assistant", "content": json.dumps({"narration": full_narration, "actions": []})}
         
         # --- END NEW TRANSITION LOGIC ---
@@ -3344,6 +3352,124 @@ def main_game_loop():
         while retry_count < 5 and not valid_response_received:
             # Pass validation retry count for intelligent model escalation
             ai_response_content = get_ai_response(conversation_history, validation_retry_count=retry_count)
+
+            # PRE-PROCESSING: Fix incorrect updatePartyTracker usage for within-module travel
+            # This must happen BEFORE any validation to prevent wrong action from being checked
+            try:
+                import json
+                response_data = json.loads(ai_response_content)
+                actions = response_data.get("actions", [])
+
+                # Debug: Show what actions AI sent before any processing
+                if actions:
+                    action_list = [a.get("action") if isinstance(a, dict) else str(a) for a in actions]
+                    print(f"DEBUG: [AI RESPONSE] Actions received: {action_list}")
+                else:
+                    print(f"DEBUG: [AI RESPONSE] No actions in response")
+
+                current_module = party_tracker_data.get("module", "")
+                actions_modified = False
+
+                # Check for updatePartyTracker being used for within-module location changes
+                for i, action in enumerate(actions):
+                    if isinstance(action, dict) and action.get("action") == "updatePartyTracker":
+                        params = action.get("parameters", {})
+
+                        # Check if this is a location transition (has currentLocationId) vs party composition change
+                        has_location_id = "currentLocationId" in params
+                        has_module = "module" in params
+
+                        if has_location_id and has_module:
+                            # Check if module is the SAME as current module (within-module travel)
+                            target_module = params.get("module", "")
+
+                            if target_module == current_module:
+                                # WRONG ACTION: Using updatePartyTracker for within-module travel
+                                # Convert to transitionLocation
+                                new_location_id = params.get("currentLocationId", "")
+
+                                print(f"DEBUG: [ACTION FIX] Converting updatePartyTracker to transitionLocation({new_location_id}) - same module")
+                                info(f"ACTION FIX: Converted updatePartyTracker to transitionLocation for within-module travel", category="action_preprocessing")
+
+                                # Replace with transitionLocation
+                                actions[i] = {
+                                    "action": "transitionLocation",
+                                    "parameters": {
+                                        "newLocation": new_location_id
+                                    }
+                                }
+                                actions_modified = True
+
+                # Update response if we modified actions
+                if actions_modified:
+                    response_data['actions'] = actions
+                    ai_response_content = json.dumps(response_data)
+                    info(f"ACTION FIX: Updated response with corrected action types", category="action_preprocessing")
+
+            except (json.JSONDecodeError, Exception) as e:
+                debug(f"Could not pre-process actions: {e}", category="action_preprocessing")
+
+            # PRE-VALIDATION: Check for transitionLocation and call transition intelligence agent
+            transition_check_passed = True
+            try:
+                import json
+                response_data = json.loads(ai_response_content)  # Re-parse in case it was modified
+                actions = response_data.get("actions", [])
+
+                # Check if any action is transitionLocation
+                for action in actions:
+                    if isinstance(action, dict) and action.get("action") == "transitionLocation":
+                        # Quick check: Reject same-location transitions immediately (no agent needed)
+                        new_location = action.get("parameters", {}).get("newLocation", "")
+                        current_location_id = party_tracker_data["worldConditions"]["currentLocationId"]
+
+                        if new_location == current_location_id:
+                            # Same location transition - STRIP the action instead of retrying
+                            info(f"VALIDATION: Same-location transition detected ({current_location_id}), stripping action", category="location_transitions")
+                            print(f"DEBUG: [SAME-LOCATION] Stripping transitionLocation({current_location_id}) from response")
+
+                            # Remove this action from the actions array
+                            actions.remove(action)
+
+                            # Update the response content with stripped actions
+                            response_data['actions'] = actions
+                            ai_response_content = json.dumps(response_data)
+
+                            # Don't retry - continue with modified response
+                            info(f"VALIDATION: Same-location action stripped, continuing with narration only", category="location_transitions")
+                            break  # Exit action checking loop, proceed to normal validation
+
+                        # Found transitionLocation - call transition intelligence agent
+                        from core.ai.action_handler import pre_validate_transition
+
+                        transition_approved, transition_error = pre_validate_transition(
+                            action.get("parameters", {}),
+                            party_tracker_data,
+                            conversation_history,
+                            location_graph,
+                            path_manager
+                        )
+
+                        if not transition_approved:
+                            # Transition blocked - append error and retry
+                            # DO NOT save failed assistant response - it teaches AI wrong pattern
+                            # AI only needs Error Note to understand the correction needed
+                            conversation_history.append({
+                                "role": "user",
+                                "content": f"Error Note: {transition_error}. Please adjust your response accordingly."
+                            })
+                            retry_count += 1
+                            transition_check_passed = False
+                            info(f"VALIDATION: Transition blocked by intelligence agent, retry {retry_count}", category="location_transitions")
+                            break  # Don't check other actions, retry immediately
+
+            except (json.JSONDecodeError, Exception) as e:
+                # If we can't parse the response, let the normal validator handle it
+                debug(f"Could not pre-validate transition: {e}", category="location_transitions")
+
+            if not transition_check_passed:
+                continue  # Skip to next retry iteration
+
             validation_result = validate_ai_response(ai_response_content, user_input_text, validation_prompt_text, conversation_history, party_tracker_data)
         
             # Unpack the validation result tuple

@@ -98,6 +98,11 @@ This checklist ensures NeverEndingQuest modules are mechanically sound, narrativ
 - [ ] Key NPCs mentioned in plot actually exist in area files
 - [ ] NPC names are consistent across all references
 - [ ] No monsters accidentally placed in `npcs` array
+- [ ] **Named NPCs in dmInstructions exist in that location's NPCs array** (specific names like "Elric", not generic "guards")
+  - Partial name matches OK: "Hedra" acceptable if "Mistress Hedra Lanternwise" in array
+  - Monsters in monsters array, not NPCs, are OK to reference
+  - Generic NPCs ("a villager", "guards") don't need array entry
+  - **Use AI review for accuracy** - keyword search produces false positives
 
 ### Monster Structure (In Location Files)
 - [ ] Each monster appears in `monsters` array (not `npcs`)
@@ -320,6 +325,36 @@ Mid-game Area (PP004):
 - [ ] BU (backup) files exist for all critical files
 - [ ] Old backup files moved to `old_backups/` or `archived_areas_*/`
 
+### Template File Integrity (BU Files) ⚠️ CRITICAL
+**BU files are clean templates and MUST NOT contain pre-populated gameplay data.**
+
+- [ ] ALL locations in BU files have `"encounters": []` (empty array)
+- [ ] ALL locations in BU files have `"adventureSummary": ""` (empty string)
+- [ ] No encounter objects with encounterId/summary in BU files
+- [ ] No pre-written adventureSummary text in BU files
+
+**Why This Matters:**
+- encounters array: Populated when player visits location (records what happened)
+- adventureSummary: AI-generated summary when player leaves location after events
+- Empty = unexplored/template, Has entries = visited/gameplay occurred
+- Transition intelligence system uses this to detect visited vs unexplored locations
+
+**Validation Commands:**
+```bash
+# Detect non-empty encounters in BU files
+grep -h '"encounters"' modules/[Module]/areas/*_BU.json | grep -v '\[\]'
+
+# Detect non-empty adventureSummary in BU files
+grep -h '"adventureSummary"' modules/[Module]/areas/*_BU.json | grep -v '""'
+```
+
+**If violations found:** BU files were incorrectly generated with pre-populated data. Fix with:
+```python
+for location in area_data['locations']:
+    location['encounters'] = []
+    location['adventureSummary'] = ""
+```
+
 ### Schema Compliance
 - [ ] All NPCs follow: `{name, description, attitude}` (all required)
 - [ ] All monsters follow: `{name, quantity: {min, max}}` (quantity required per schema)
@@ -353,6 +388,64 @@ Mid-game Area (PP004):
 - [ ] Combat triggers clearly stated
 - [ ] Roleplay guidance provided for key NPCs
 - [ ] `dmNotes` in plot file explain complex mechanics
+
+### Spawn Loop Prevention ⚠️ CRITICAL
+**Prevent infinite monster spawning by identifying unconditional spawn instructions**
+
+- [ ] **HIGH RISK ONLY:** Check for unconditional "Use the [Monster Name]" pattern without nearby "if/when" conditional
+- [ ] Locations with vague progression ("drive deeper") should have specific destination if it's a required path
+
+**What to Look For (HIGH RISK):**
+- Pattern: "Use the [Monster]" or "spawn [Monster]" as unconditional instruction
+- No "if", "when", or "after" conditional within 50 characters before the instruction
+- Vague progression like "drive the party deeper" without naming destination location
+
+**Example - HIGH RISK (causes spawn loops):**
+```
+"Use the Cornfield Shadow as a low-level ambush or to drive the party deeper."
+→ Unconditional "Use the Shadow", vague "drive deeper", AI spawns infinitely
+```
+
+**Example - SAFE (acceptable patterns):**
+```
+"Call createEncounter with Shadow if party makes noise" ✓ (has "if")
+"Animated Scarecrow defends its post if disturbed" ✓ (has "if")
+"On combat encounter: Call createEncounter" ✓ (reactive, not prescriptive)
+```
+
+**Example - FIXED (best practice):**
+```
+"IF monsters array contains Cornfield Shadow: Use as ambush to build tension.
+AFTER threats cleared (monsters array empty): Guide party to C03 (Widow Grella).
+Do NOT spawn additional threats once area is cleared."
+```
+
+**Note:** Most locations naturally avoid this by using reactive language ("if disturbed", "on approach", "when party does X"). Only audit for the unconditional "Use the [Monster]" pattern which is the actual bug.
+
+### Rare Encounter Triggers ⚠️ CRITICAL
+**Avoid complex or rare conditions that can break game progression**
+
+- [ ] No rare environmental triggers for essential NPCs or plot progression
+- [ ] Avoid: "when moon appears", "during full moon", "at midnight", "if raining"
+- [ ] Avoid: Time-based conditions that may never occur naturally
+- [ ] Avoid: Complex multi-condition requirements for critical encounters
+
+**Problematic Triggers (can break progression):**
+```
+"When moon appears: Present Widow Grella" ❌ (rare condition blocks key NPC)
+"During full moon: Spawn quest-critical monster" ❌ (may never trigger)
+"At midnight if party has X item: Reveal NPC" ❌ (too specific)
+```
+
+**Safe Triggers (reliable and player-controlled):**
+```
+"On arrival: Present Widow Grella" ✓ (immediate, guaranteed)
+"IF party disturbs effigy: Call createEncounter" ✓ (player action)
+"When party investigates: Reveal NPC" ✓ (player-controlled)
+"IF party makes noise: Trigger ambush" ✓ (player action)
+```
+
+**Rule:** Essential NPCs and plot progression should use **immediate** ("On arrival") or **player-controlled** ("IF party does X") triggers, never rare environmental conditions.
 
 ### Player Agency
 - [ ] Multiple approaches available (combat, stealth, diplomacy)
