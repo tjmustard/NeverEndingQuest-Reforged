@@ -4,10 +4,10 @@ NPC Name Normalizer - Word-based exact matching
 Matches INPUT name TO party tracker names using exact word containment
 
 Strategy:
-- "Kira" matches "Scout Kira" (word "Kira" found)
-- "Kira" REJECTS if both "Scout Kira" and "Scout Kira Junior" exist (multiple matches)
-- "Ranger Kira" matches "Scout Kira" (word "Kira" found, ignore title difference)
-- "Kirpa" does NOT match "Scout Kira" (no exact word match)
+- "Alice" matches "Scout Alice" (word "Alice" found)
+- "Alice" REJECTS if both "Scout Alice" and "Scout Alice Junior" exist (multiple matches)
+- "Ranger Alice" matches "Scout Alice" (word "Alice" found, ignore title difference)
+- "Alicia" does NOT match "Scout Alice" (no exact word match)
 
 Related: GitHub Issue #108
 """
@@ -62,7 +62,7 @@ def normalize_npc_name_for_action(input_name, party_tracker_data, debug_print=Fa
             return valid_name, "exact"
 
         # Player character: handle underscore format
-        # "eirik_hearthwise" matches "Eirik Hearthwise" or "eirik hearthwise"
+        # "testplayer_main" matches "TestPlayer Main" or "testplayer main"
         if '_' in valid_name:
             valid_spaced = valid_name.replace('_', ' ')
             if valid_spaced.lower() == input_lower:
@@ -77,7 +77,7 @@ def normalize_npc_name_for_action(input_name, party_tracker_data, debug_print=Fa
         print(f"[NPC_NORM] Input words: {input_words_list}")
 
     # Try matching with different word combinations
-    # For "Ranger Kira": try ["ranger", "kira"] and ["kira"] (drop first word)
+    # For "Ranger Alice": try ["ranger", "alice"] and ["alice"] (drop first word)
     word_combinations_to_try = [
         set(input_words_list),  # All words: ["ranger", "kira"]
     ]
@@ -144,21 +144,21 @@ def normalize_npc_name_for_action(input_name, party_tracker_data, debug_print=Fa
 if __name__ == "__main__":
     # Quick sanity test
     test_tracker = {
-        "partyMembers": ["eirik_hearthwise"],
+        "partyMembers": ["testplayer_main"],
         "partyNPCs": [
-            {"name": "Scout Kira"},
-            {"name": "Scout Elen"},
-            {"name": "Ranger Thane"}
+            {"name": "Scout Alice"},
+            {"name": "Scout Bob"},
+            {"name": "Ranger Charlie"}
         ]
     }
 
     tests = [
-        ("Scout Kira", "Scout Kira", "exact"),
-        ("Kira", "Scout Kira", "word_match"),
-        ("Ranger Kira", "Scout Kira", "word_match"),
+        ("Scout Alice", "Scout Alice", "exact"),
+        ("Alice", "Scout Alice", "word_match"),
+        ("Ranger Alice", "Scout Alice", "word_match"),
         ("Scout", None, "no_match"),  # Ambiguous
-        ("Kirpa", None, "no_match"),  # Typo
-        ("Eirik", "eirik_hearthwise", "word_match"),
+        ("Alicia", None, "no_match"),  # Typo
+        ("TestPlayer", "testplayer_main", "word_match"),
     ]
 
     print("Quick Sanity Test:")
