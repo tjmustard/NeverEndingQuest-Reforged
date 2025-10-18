@@ -417,6 +417,31 @@ Do NOT spawn additional threats once area is cleared."
 
 **Note:** Most locations naturally avoid this by using reactive language ("if disturbed", "on approach", "when party does X"). Only audit for the unconditional "Use the [Monster]" pattern which is the actual bug.
 
+### Rare Encounter Triggers ⚠️ CRITICAL
+**Avoid complex or rare conditions that can break game progression**
+
+- [ ] No rare environmental triggers for essential NPCs or plot progression
+- [ ] Avoid: "when moon appears", "during full moon", "at midnight", "if raining"
+- [ ] Avoid: Time-based conditions that may never occur naturally
+- [ ] Avoid: Complex multi-condition requirements for critical encounters
+
+**Problematic Triggers (can break progression):**
+```
+"When moon appears: Present Widow Grella" ❌ (rare condition blocks key NPC)
+"During full moon: Spawn quest-critical monster" ❌ (may never trigger)
+"At midnight if party has X item: Reveal NPC" ❌ (too specific)
+```
+
+**Safe Triggers (reliable and player-controlled):**
+```
+"On arrival: Present Widow Grella" ✓ (immediate, guaranteed)
+"IF party disturbs effigy: Call createEncounter" ✓ (player action)
+"When party investigates: Reveal NPC" ✓ (player-controlled)
+"IF party makes noise: Trigger ambush" ✓ (player action)
+```
+
+**Rule:** Essential NPCs and plot progression should use **immediate** ("On arrival") or **player-controlled** ("IF party does X") triggers, never rare environmental conditions.
+
 ### Player Agency
 - [ ] Multiple approaches available (combat, stealth, diplomacy)
 - [ ] Choices have stated consequences in `plotImpact`
