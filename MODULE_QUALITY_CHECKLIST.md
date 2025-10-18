@@ -384,6 +384,39 @@ for location in area_data['locations']:
 - [ ] Roleplay guidance provided for key NPCs
 - [ ] `dmNotes` in plot file explain complex mechanics
 
+### Spawn Loop Prevention ⚠️ CRITICAL
+**Prevent infinite monster spawning by identifying unconditional spawn instructions**
+
+- [ ] **HIGH RISK ONLY:** Check for unconditional "Use the [Monster Name]" pattern without nearby "if/when" conditional
+- [ ] Locations with vague progression ("drive deeper") should have specific destination if it's a required path
+
+**What to Look For (HIGH RISK):**
+- Pattern: "Use the [Monster]" or "spawn [Monster]" as unconditional instruction
+- No "if", "when", or "after" conditional within 50 characters before the instruction
+- Vague progression like "drive the party deeper" without naming destination location
+
+**Example - HIGH RISK (causes spawn loops):**
+```
+"Use the Cornfield Shadow as a low-level ambush or to drive the party deeper."
+→ Unconditional "Use the Shadow", vague "drive deeper", AI spawns infinitely
+```
+
+**Example - SAFE (acceptable patterns):**
+```
+"Call createEncounter with Shadow if party makes noise" ✓ (has "if")
+"Animated Scarecrow defends its post if disturbed" ✓ (has "if")
+"On combat encounter: Call createEncounter" ✓ (reactive, not prescriptive)
+```
+
+**Example - FIXED (best practice):**
+```
+"IF monsters array contains Cornfield Shadow: Use as ambush to build tension.
+AFTER threats cleared (monsters array empty): Guide party to C03 (Widow Grella).
+Do NOT spawn additional threats once area is cleared."
+```
+
+**Note:** Most locations naturally avoid this by using reactive language ("if disturbed", "on approach", "when party does X"). Only audit for the unconditional "Use the [Monster]" pattern which is the actual bug.
+
 ### Player Agency
 - [ ] Multiple approaches available (combat, stealth, diplomacy)
 - [ ] Choices have stated consequences in `plotImpact`
