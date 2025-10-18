@@ -1852,7 +1852,12 @@ def process_ai_response(response, party_tracker_data, location_data, conversatio
         # If it's a transition, handle it with the special two-step process
         if is_transition:
             debug("STATE_CHANGE: Transition action detected. Holding departure narration.", category="location_transitions")
-            
+
+            # SURGICAL FIX: Save pre-transition response to history before processing action
+            conversation_history.append({"role": "assistant", "content": response})
+            save_conversation_history(conversation_history)
+            debug("SUCCESS: Pre-transition assistant message saved to history", category="location_transitions")
+
             # Step 1: Process actions to update state (summary, party_tracker, etc.)
             actions_processed = False
             for action in parsed_response.get("actions", []):
@@ -1877,31 +1882,28 @@ def process_ai_response(response, party_tracker_data, location_data, conversatio
             if actions_processed:
                 party_tracker_data = load_json_file("party_tracker.json")
             
-            # Step 2: Reload the state to get the NEW location context
-            fresh_party_data = load_json_file("party_tracker.json")
+            # Step 2: Reload conversation history to get both saved messages
             fresh_conversation_history = load_json_file(json_file) or []
-            
-            # Step 3: Generate the arrival narration using the new helper function
-            arrival_narration = generate_arrival_narration(departure_narration, fresh_party_data, fresh_conversation_history)
-            
-            # <--- MODIFIED SECTION: Use the new seamless narration generator --->
-            # Step 4: Blend the departure and arrival narrations into a single, cohesive story.
-            full_narration = generate_seamless_transition_narration(departure_narration, arrival_narration)
-            
-            # Step 5: Display the final, polished narration
-            print(colored("Dungeon Master:", "blue"), colored(full_narration, "blue"))
-            # <--- END OF MODIFIED SECTION --->
 
-            # Step 6: Add the final combined narration to history as a single, clean message.
-            for i in range(len(conversation_history) - 1, -1, -1):
-                if conversation_history[i].get("role") == "assistant":
-                    conversation_history[i]['content'] = json.dumps({"narration": full_narration, "actions": []}) # Actions already processed
-                    debug("SUCCESS: Replaced last assistant message with combined transition narration.", category="location_transitions")
-                    break
-            
-            save_conversation_history(conversation_history)
-            
-            return {"role": "assistant", "content": json.dumps({"narration": full_narration, "actions": []})}
+            # Step 3: Extract last TWO assistant messages from history
+            assistant_messages = []
+            for i in range(len(fresh_conversation_history) - 1, -1, -1):
+                if fresh_conversation_history[i].get("role") == "assistant":
+                    assistant_messages.insert(0, fresh_conversation_history[i].get("content", ""))
+                    if len(assistant_messages) == 2:
+                        break
+
+            # Step 4: Combine both narrations for display only (don't save combined version)
+            if len(assistant_messages) >= 2:
+                combined_display = f"{assistant_messages[0]}\n\n{assistant_messages[1]}"
+            else:
+                combined_display = assistant_messages[0] if assistant_messages else ""
+
+            # Step 5: Display combined narration to player
+            print(colored("Dungeon Master:", "blue"), colored(combined_display, "blue"))
+            debug("SUCCESS: Combined transition narration displayed (both messages remain separate in history)", category="location_transitions")
+
+            return {"role": "assistant", "content": combined_display}
         
         # --- END NEW TRANSITION LOGIC ---
 

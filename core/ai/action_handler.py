@@ -972,7 +972,7 @@ def process_action(action, party_tracker_data, location_data, conversation_histo
                 # Fallback to original format if we can't get the IDs
                 conversation_history.append({"role": "user", "content": f"Location transition: {sanitize_text(current_location_name)} to {sanitize_text(new_location_name_or_id)}"})
             
-            # Save conversation history immediately after adding transition
+            # Save conversation history immediately after adding transition marker
             import sys
 
             if __name__ != "__main__":
@@ -981,14 +981,38 @@ def process_action(action, party_tracker_data, location_data, conversation_histo
 
             from main import save_conversation_history
             save_conversation_history(conversation_history)
-            
-            # Check for any missing summaries after the transition
-            from core.ai import cumulative_summary
-            conversation_history = cumulative_summary.check_and_compact_missing_summaries(
-                conversation_history, 
-                party_tracker_data
-            )
-            save_conversation_history(conversation_history)
+
+            # GENERATE TRANSITION NARRATION using the transition_prompt
+            info("STATE_CHANGE: Generating transition narration using AI", category="location_transitions")
+            try:
+                client = OpenAI(api_key=config.OPENAI_API_KEY)
+
+                # Build prompt for transition narration
+                transition_messages = [
+                    {"role": "system", "content": "You are a skilled Dungeon Master narrating a location transition."},
+                    {"role": "user", "content": transition_prompt}
+                ]
+
+                transition_response = client.chat.completions.create(
+                    model=config.DM_MAIN_MODEL,
+                    messages=transition_messages,
+                    temperature=0.7
+                )
+
+                transition_narration = transition_response.choices[0].message.content.strip()
+                info("SUCCESS: Transition narration generated", category="location_transitions")
+
+                # Save transition narration to conversation history as assistant message
+                conversation_history.append({"role": "assistant", "content": transition_narration})
+                save_conversation_history(conversation_history)
+                debug("SUCCESS: Transition narration saved to conversation history", category="location_transitions")
+
+            except Exception as e:
+                error(f"FAILURE: Failed to generate transition narration", exception=e, category="location_transitions")
+                transition_narration = f"The party travels to {new_location_name}."
+                # Save fallback narration too
+                conversation_history.append({"role": "assistant", "content": transition_narration})
+                save_conversation_history(conversation_history)
             
             # CAMPAIGN INTEGRATION: Check for cross-module transitions
             try:
