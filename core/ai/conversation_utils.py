@@ -335,14 +335,13 @@ def update_conversation_history(conversation_history, party_tracker_data, plot_d
 
     # Remove any existing system messages for location, party tracker, plot, map, module data, world state, and campaign context
     # Also remove module transition markers as they're processed separately
-    # AND remove any duplicate companion memories (keep only the first one after system prompt)
-    companion_memory_seen = False
+    # ALWAYS remove ALL companion memories - they will be freshly injected from file to prevent stale data
     updated_history = []
-    
+
     for msg in conversation_history:
         # Skip if it's a system message we want to remove
         if msg["role"] == "system" and any(key in msg["content"] for key in [
-            "Current Location:", 
+            "Current Location:",
             "No active location data available",
             "Here's the updated party tracker data:",
             "Here's the current plot data:",
@@ -353,58 +352,65 @@ def update_conversation_history(conversation_history, party_tracker_data, plot_d
             "=== CAMPAIGN CONTEXT ==="
         ]):
             continue
-        
+
         # Skip module transition markers
         if msg["role"] == "user" and "Module transition:" in msg.get("content", ""):
             continue
-            
-        # Handle companion memories - keep only the first occurrence
+
+        # ALWAYS remove companion memories - fresh data will be injected from file
         if msg["role"] == "system" and "=== COMPANION MEMORIES (Compressed) ===" in msg.get("content", ""):
-            if not companion_memory_seen:
-                companion_memory_seen = True
-                updated_history.append(msg)
-                debug("Keeping first companion memories instance", category="memory")
-            else:
-                debug("Removing duplicate companion memories", category="memory")
+            debug("Removing existing companion memories (will be refreshed from file)", category="memory")
             continue
-            
+
         # Keep all other messages
         updated_history.append(msg)
 
     # Create a new list starting with the primary system prompt
     new_history = [primary_system_prompt] if primary_system_prompt else []
 
-    # Inject compressed companion memories immediately after system prompt (per AI recommendation)
-    # But first check if they already exist in the conversation to avoid duplicates
-    companion_memories_exists = False
-    
-    # Check both new_history and updated_history for existing companion memories
-    for msg in new_history + updated_history:
-        if msg.get("role") == "system" and "=== COMPANION MEMORIES (Compressed) ===" in msg.get("content", ""):
-            companion_memories_exists = True
-            debug("Companion memories already present in conversation, skipping injection", category="memory")
-            break
-    
-    if not companion_memories_exists:
-        try:
-            compressed_path = os.path.join("data", "companion_memories", "memories_compressed.json")
-            if os.path.exists(compressed_path):
-                with open(compressed_path, 'r', encoding='utf-8') as f:
-                    memories = json.load(f)
+    # ALWAYS inject fresh compressed companion memories from file
+    # This prevents stale data from being perpetuated in conversation history
+    try:
+        compressed_path = os.path.join("data", "companion_memories", "memories_compressed.json")
+        if os.path.exists(compressed_path):
+            with open(compressed_path, 'r', encoding='utf-8') as f:
+                memories = json.load(f)
 
-                # Format memories compactly for AI
-                if memories and 'npcs' in memories:
+            # Format memories compactly for AI
+            if memories and 'npcs' in memories:
+                # Self-healing: Validate memory structure and fix corrupted data
+                valid_npcs = []
+                for npc in memories['npcs']:
+                    # Check for corrupted emotional state (all zeros) or empty memories with positive interaction count
+                    es = npc.get('es', [0.0, 0.0, 0.0, 0.0, 0.0])
+                    mem = npc.get('mem', [])
+                    interaction_count = npc.get('ti', 0)
+                    npc_name = npc.get('n', 'unknown')
+
+                    # Flag suspicious data patterns
+                    if sum(abs(x) for x in es) == 0.0 and len(mem) == 0 and interaction_count > 0:
+                        warning(f"Detected corrupted memory data for {npc_name}: " +
+                               f"{interaction_count} interactions but zero emotional state and no memories. " +
+                               "This NPC will be excluded from context until memories regenerate.",
+                               category="memory")
+                        continue
+
+                    valid_npcs.append(npc)
+
+                if valid_npcs:
                     memory_content = "=== COMPANION MEMORIES (Compressed) ===\n"
-                    memory_content += json.dumps(memories['npcs'], separators=(',', ':'))
+                    memory_content += json.dumps(valid_npcs, separators=(',', ':'))
                     memory_content += "\n@GUIDE: Use ES (emotional state) for tone, BM (behavioral model) for consistency"
                     memory_content += "\n==="
 
                     # Insert right after system prompt
                     memory_message = {'role': 'system', 'content': memory_content}
                     new_history.append(memory_message)
-                    debug("Injected compressed companion memories after system prompt", category="memory")
-        except Exception as e:
-            debug(f"Failed to inject memories (non-fatal): {e}", category="memory")
+                    debug(f"Injected fresh companion memories for {len(valid_npcs)} NPCs", category="memory")
+                else:
+                    debug("No valid companion memories to inject (all NPCs have corrupted data)", category="memory")
+    except Exception as e:
+        warning(f"Failed to inject memories (non-fatal): {e}", category="memory")
 
     debug(f"VALIDATION: Current module from party tracker: '{current_module}'", category="module_management")
     
