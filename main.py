@@ -1897,9 +1897,16 @@ def process_ai_response(response, party_tracker_data, location_data, conversatio
             print(colored("Dungeon Master:", "blue"), colored(full_narration, "blue"))
             # <--- END OF MODIFIED SECTION --->
 
-            # Step 6: Display only - both messages already saved separately in history
-            # No need to replace anything, the seamless narration is just for player display
-            debug("SUCCESS: Seamless transition narration displayed to player", category="location_transitions")
+            # Step 6: Replace the raw transition narration with the seamless version in history
+            # This ensures conversation history matches what the player saw
+            fresh_conversation_history = load_json_file(json_file) or []
+            for i in range(len(fresh_conversation_history) - 1, -1, -1):
+                if fresh_conversation_history[i].get("role") == "assistant":
+                    fresh_conversation_history[i]['content'] = full_narration
+                    debug("SUCCESS: Replaced raw transition narration with seamless version in history", category="location_transitions")
+                    break
+
+            save_conversation_history(fresh_conversation_history)
 
             return {"role": "assistant", "content": json.dumps({"narration": full_narration, "actions": []})}
         
