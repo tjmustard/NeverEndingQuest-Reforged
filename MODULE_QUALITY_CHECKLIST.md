@@ -98,6 +98,11 @@ This checklist ensures NeverEndingQuest modules are mechanically sound, narrativ
 - [ ] Key NPCs mentioned in plot actually exist in area files
 - [ ] NPC names are consistent across all references
 - [ ] No monsters accidentally placed in `npcs` array
+- [ ] **Named NPCs in dmInstructions exist in that location's NPCs array** (specific names like "Elric", not generic "guards")
+  - Partial name matches OK: "Hedra" acceptable if "Mistress Hedra Lanternwise" in array
+  - Monsters in monsters array, not NPCs, are OK to reference
+  - Generic NPCs ("a villager", "guards") don't need array entry
+  - **Use AI review for accuracy** - keyword search produces false positives
 
 ### Monster Structure (In Location Files)
 - [ ] Each monster appears in `monsters` array (not `npcs`)
