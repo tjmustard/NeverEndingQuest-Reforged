@@ -849,7 +849,32 @@ Create atmospheric travel narration that leads into this adventure."""
                             with open(file_path, 'w', encoding='utf-8') as f:
                                 f.write(content)
                             print(f"DEBUG: [Module Stitcher] Updated references in {os.path.relpath(file_path, module_path)}")
-            
+
+            # CRITICAL: Update party_tracker.json if this module is currently active
+            party_tracker_path = 'party_tracker.json'
+            if os.path.exists(party_tracker_path):
+                try:
+                    party_tracker = safe_json_load(party_tracker_path)
+                    if party_tracker:
+                        active_module = party_tracker.get('module', '').replace(' ', '_')
+
+                        # Check if the renamed module is the currently active one
+                        if active_module == module_name:
+                            world_conditions = party_tracker.get('worldConditions', {})
+                            current_location_id = world_conditions.get('currentLocationId')
+
+                            # If current location ID was renamed, update it
+                            if current_location_id and current_location_id in id_mapping:
+                                new_location_id = id_mapping[current_location_id]
+                                world_conditions['currentLocationId'] = new_location_id
+                                party_tracker['worldConditions'] = world_conditions
+
+                                # Save updated party tracker
+                                safe_json_dump(party_tracker, party_tracker_path)
+                                print(f"DEBUG: [Module Stitcher] Updated party_tracker.json: {current_location_id} -> {new_location_id}")
+                except Exception as tracker_error:
+                    print(f"DEBUG: [Module Stitcher] WARNING: Could not update party_tracker.json: {tracker_error}")
+
         except Exception as e:
             print(f"DEBUG: [Module Stitcher] ERROR: Failed to update location references: {e}")
     
