@@ -520,7 +520,16 @@ Create atmospheric travel narration that leads into this adventure."""
                 bu_updated = self._update_bu_files_after_conflict_resolution(module_name)
                 if bu_updated:
                     print(f"  - Updated {bu_updated} BU files with corrected location IDs")
-                
+
+                # Validate and repair connectivity after ID changes
+                print(f"  - Validating connectivity...")
+                from core.validation.connectivity_repair import validate_and_repair_module
+                connectivity_valid = validate_and_repair_module(module_name, auto_repair=True)
+                if connectivity_valid:
+                    print(f"  - Connectivity validated and repaired (if needed)")
+                else:
+                    print(f"  - WARNING: Connectivity issues detected but could not be fully repaired")
+
                 # Re-analyze module after ID changes
                 module_data = self.analyze_module(module_name)
                 if not module_data:
@@ -825,16 +834,36 @@ Create atmospheric travel narration that leads into this adventure."""
             if not id_mapping:
                 return
             
-            # Update all JSON files in the module
+            # Update all JSON files in the module - both text replacement AND explicit array updates
             for root, dirs, files in os.walk(module_path):
                 for filename in files:
                     if filename.endswith('.json') and not filename.endswith('.bak'):
                         file_path = os.path.join(root, filename)
-                        
+
+                        # For area files, do explicit JSON updates for areaConnectivityId
+                        if 'areas' in file_path and file_path.endswith('.json'):
+                            area_data = safe_json_load(file_path)
+                            if area_data and 'locations' in area_data:
+                                modified = False
+                                for location in area_data['locations']:
+                                    # Update areaConnectivityId arrays explicitly
+                                    if 'areaConnectivityId' in location:
+                                        old_ids = location['areaConnectivityId']
+                                        new_ids = [id_mapping.get(old_id, old_id) for old_id in old_ids]
+                                        if old_ids != new_ids:
+                                            location['areaConnectivityId'] = new_ids
+                                            modified = True
+                                            print(f"DEBUG: [Module Stitcher] Updated areaConnectivityId in {location.get('locationId')}: {old_ids} -> {new_ids}")
+
+                                if modified:
+                                    safe_json_dump(area_data, file_path)
+                                    print(f"DEBUG: [Module Stitcher] Saved updated connectivity in {os.path.basename(file_path)}")
+
+                        # Also do text-based replacement for other references
                         # Read file content
                         with open(file_path, 'r', encoding='utf-8') as f:
                             content = f.read()
-                        
+
                         # Replace all old IDs with new IDs
                         original_content = content
                         for old_id, new_id in id_mapping.items():
@@ -843,12 +872,45 @@ Create atmospheric travel narration that leads into this adventure."""
                             import re
                             pattern = r'\b' + re.escape(old_id) + r'\b'
                             content = re.sub(pattern, new_id, content)
-                        
+
                         # Write back if changed
                         if content != original_content:
                             with open(file_path, 'w', encoding='utf-8') as f:
                                 f.write(content)
-                            print(f"DEBUG: [Module Stitcher] Updated references in {os.path.relpath(file_path, module_path)}")
+                            print(f"DEBUG: [Module Stitcher] Updated text references in {os.path.relpath(file_path, module_path)}")
+
+            # Update module_plot.json if it exists
+            plot_file_path = os.path.join(module_path, 'module_plot.json')
+            if os.path.exists(plot_file_path):
+                try:
+                    plot_data = safe_json_load(plot_file_path)
+                    if plot_data:
+                        plot_modified = False
+
+                        # Update plotPoints[].location
+                        for plot_point in plot_data.get('plotPoints', []):
+                            if 'location' in plot_point and plot_point['location'] in id_mapping:
+                                old_loc = plot_point['location']
+                                new_loc = id_mapping[old_loc]
+                                plot_point['location'] = new_loc
+                                plot_modified = True
+                                print(f"DEBUG: [Module Stitcher] Updated plot point {plot_point.get('id')} location: {old_loc} -> {new_loc}")
+
+                            # Update sideQuests[].involvedLocations
+                            for side_quest in plot_point.get('sideQuests', []):
+                                if 'involvedLocations' in side_quest:
+                                    old_locs = side_quest['involvedLocations']
+                                    new_locs = [id_mapping.get(loc, loc) for loc in old_locs]
+                                    if old_locs != new_locs:
+                                        side_quest['involvedLocations'] = new_locs
+                                        plot_modified = True
+                                        print(f"DEBUG: [Module Stitcher] Updated side quest {side_quest.get('id')} locations: {old_locs} -> {new_locs}")
+
+                        if plot_modified:
+                            safe_json_dump(plot_data, plot_file_path)
+                            print(f"DEBUG: [Module Stitcher] Updated module_plot.json with new location IDs")
+                except Exception as plot_error:
+                    print(f"DEBUG: [Module Stitcher] WARNING: Could not update module_plot.json: {plot_error}")
 
             # CRITICAL: Update party_tracker.json if this module is currently active
             party_tracker_path = 'party_tracker.json'

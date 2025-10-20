@@ -824,7 +824,13 @@ If the field expects an object, return just the object.
                     location["connectivity"] = [
                         id_mapping.get(conn, conn) for conn in location["connectivity"]
                     ]
-        
+
+                # Update areaConnectivityId references at LOCATION level
+                if "areaConnectivityId" in location:
+                    location["areaConnectivityId"] = [
+                        id_mapping.get(conn_id, conn_id) for conn_id in location["areaConnectivityId"]
+                    ]
+
         # Update map room IDs if they match location IDs
         if "map" in area_data and "rooms" in area_data["map"]:
             for room in area_data["map"]["rooms"]:
@@ -849,13 +855,7 @@ If the field expects an object, return just the object.
                 for j, cell in enumerate(row):
                     if cell in id_mapping:
                         area_data["map"]["layout"][i][j] = id_mapping[cell]
-        
-        # Update areaConnectivityId references (these reference location IDs)
-        if "areaConnectivityId" in area_data:
-            area_data["areaConnectivityId"] = [
-                id_mapping.get(conn_id, conn_id) for conn_id in area_data["areaConnectivityId"]
-            ]
-        
+
         return area_data
     
         
