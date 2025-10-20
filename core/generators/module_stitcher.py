@@ -643,6 +643,9 @@ Create atmospheric travel narration that leads into this adventure."""
     def _update_area_id_in_files(self, module_path: str, old_id: str, new_id: str) -> bool:
         """Update area ID in area file and any references"""
         try:
+            # Track location ID mappings for party tracker update
+            location_id_mapping = {}
+
             # Find and update the area file
             area_file = os.path.join(module_path, f"{old_id}.json")
             if os.path.exists(area_file):
@@ -650,17 +653,19 @@ Create atmospheric travel narration that leads into this adventure."""
                 area_data = safe_json_load(area_file)
                 if area_data and 'areaId' in area_data:
                     area_data['areaId'] = new_id
-                    
+
                     # Update location IDs within the area
                     for location in area_data.get('locations', []):
                         old_loc_id = location.get('locationId', '')
                         if old_loc_id.startswith(old_id):
                             new_loc_id = old_loc_id.replace(old_id, new_id, 1)
                             location['locationId'] = new_loc_id
-                        
+                            # Track the mapping for party_tracker update
+                            location_id_mapping[old_loc_id] = new_loc_id
+
                         # Note: areaConnectivityId contains location IDs which are independent
                         # of area IDs/names, so we do NOT update them when renaming areas
-                    
+
                     # Update map room IDs if map exists
                     map_data = area_data.get('map', {})
                     if map_data and 'rooms' in map_data:
@@ -669,7 +674,7 @@ Create atmospheric travel narration that leads into this adventure."""
                             if old_room_id.startswith(old_id):
                                 new_room_id = old_room_id.replace(old_id, new_id, 1)
                                 room['id'] = new_room_id
-                                
+
                                 # Update connections
                                 if 'connections' in room:
                                     updated_connections = []
@@ -679,28 +684,84 @@ Create atmospheric travel narration that leads into this adventure."""
                                         else:
                                             updated_connections.append(conn)
                                     room['connections'] = updated_connections
-                    
+
                     # Save updated area file
                     new_area_file = os.path.join(module_path, f"{new_id}.json")
                     safe_json_dump(area_data, new_area_file)
-                    
+
                     # Remove old file
                     os.remove(area_file)
-                    
+
                     # Update corresponding map file if it exists
                     old_map_file = os.path.join(module_path, f"map_{old_id}.json")
                     if os.path.exists(old_map_file):
                         new_map_file = os.path.join(module_path, f"map_{new_id}.json")
                         os.rename(old_map_file, new_map_file)
-                    
+
+                    # Update party_tracker.json if location IDs were changed
+                    if location_id_mapping:
+                        self._update_party_tracker_location_ids(location_id_mapping, module_path)
+
                     return True
-            
+
             return False
-            
+
         except Exception as e:
             print(f"Error updating area ID from {old_id} to {new_id}: {e}")
             return False
     
+    def _update_party_tracker_location_ids(self, location_id_mapping: Dict[str, str], module_path: str) -> bool:
+        """
+        Update party_tracker.json with new location IDs after area ID changes.
+
+        Args:
+            location_id_mapping: Dictionary mapping old location IDs to new location IDs
+            module_path: Path to the module being updated
+
+        Returns:
+            True if party_tracker was updated, False otherwise
+        """
+        try:
+            # Extract module name from module path
+            module_name = os.path.basename(module_path)
+
+            # Load party_tracker.json from root directory
+            party_tracker_path = 'party_tracker.json'
+            if not os.path.exists(party_tracker_path):
+                return False
+
+            party_tracker = safe_json_load(party_tracker_path)
+            if not party_tracker:
+                return False
+
+            # Get the active module name (normalize spaces to underscores)
+            active_module = party_tracker.get('module', '').replace(' ', '_')
+
+            # Only update if the party is currently in this module
+            if active_module != module_name:
+                return False
+
+            # Get current location ID
+            world_conditions = party_tracker.get('worldConditions', {})
+            current_location_id = world_conditions.get('currentLocationId')
+
+            # Check if current location ID needs to be updated
+            if current_location_id and current_location_id in location_id_mapping:
+                new_location_id = location_id_mapping[current_location_id]
+                world_conditions['currentLocationId'] = new_location_id
+                party_tracker['worldConditions'] = world_conditions
+
+                # Save updated party tracker
+                safe_json_dump(party_tracker, party_tracker_path)
+                print(f"DEBUG: [Module Stitcher] Updated party_tracker.json: {current_location_id} -> {new_location_id} (area ID change)")
+                return True
+
+            return False
+
+        except Exception as e:
+            print(f"DEBUG: [Module Stitcher] ERROR: Failed to update party_tracker.json: {e}")
+            return False
+
     def _resolve_and_reprefix_location_ids(self, module_name: str, module_path: str) -> int:
         """
         Ensures all location IDs in a new module are globally unique.
