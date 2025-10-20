@@ -442,83 +442,87 @@ Create atmospheric travel narration that leads into this adventure."""
                 "generatedDate": datetime.now().isoformat()
             }
     
-    def _create_module_backup(self, module_name: str) -> bool:
-        """Create backup of all module files before integration"""
+    def _create_module_backup(self, module_name: str) -> str:
+        """Create backup of all module files before integration
+
+        Returns:
+            str: Path to backup directory if successful, None otherwise
+        """
         try:
             module_path = os.path.join(self.modules_dir, module_name)
             if not os.path.exists(module_path):
-                return False
-            
+                return None
+
             # Create backup directory with timestamp
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             backup_dir = os.path.join(module_path, f"backup_pre_integration_{timestamp}")
             os.makedirs(backup_dir, exist_ok=True)
-            
+
             # List all files to backup
             files_backed_up = 0
-            
+
             # Backup all JSON files in module root
             for filename in os.listdir(module_path):
                 file_path = os.path.join(module_path, filename)
-                
+
                 # Skip directories and non-JSON files, but backup everything else for safety
                 if os.path.isfile(file_path) and filename.endswith('.json'):
                     backup_path = os.path.join(backup_dir, filename)
-                    
+
                     try:
                         import shutil
                         shutil.copy2(file_path, backup_path)
                         files_backed_up += 1
                     except Exception as e:
                         print(f"    - Warning: Could not backup {filename}: {e}")
-            
+
             # Backup subdirectories (characters, monsters, etc.)
-            for subdir in ['characters', 'monsters', 'encounters']:
+            for subdir in ['characters', 'monsters', 'encounters', 'areas']:
                 subdir_path = os.path.join(module_path, subdir)
                 if os.path.exists(subdir_path) and os.path.isdir(subdir_path):
                     backup_subdir = os.path.join(backup_dir, subdir)
                     os.makedirs(backup_subdir, exist_ok=True)
-                    
+
                     for filename in os.listdir(subdir_path):
                         if filename.endswith('.json'):
                             src_file = os.path.join(subdir_path, filename)
                             dst_file = os.path.join(backup_subdir, filename)
-                            
+
                             try:
                                 import shutil
                                 shutil.copy2(src_file, dst_file)
                                 files_backed_up += 1
                             except Exception as e:
                                 print(f"    - Warning: Could not backup {subdir}/{filename}: {e}")
-            
+
             print(f"    - Backed up {files_backed_up} files to {backup_dir}")
-            return files_backed_up > 0
-            
+            return backup_dir if files_backed_up > 0 else None
+
         except Exception as e:
             print(f"Error creating module backup: {e}")
-            return False
+            return None
     
     def integrate_module(self, module_name: str) -> bool:
         """Integrate a new module into the world registry with conflict resolution"""
         try:
             print(f"Integrating module: {module_name}")
-            
+
             # Create backup of all module files before any modifications
-            backup_created = self._create_module_backup(module_name)
-            if backup_created:
+            backup_dir = self._create_module_backup(module_name)
+            if backup_dir:
                 print(f"  - Created backup for module {module_name}")
-            
+
             # Analyze the module
             module_data = self.analyze_module(module_name)
             if not module_data:
                 print(f"Failed to analyze module: {module_name}")
                 return False
-            
+
             # Check for conflicts and resolve them
-            conflicts_resolved = self._resolve_id_conflicts(module_name, module_data)
+            conflicts_resolved = self._resolve_id_conflicts(module_name, module_data, backup_dir)
             if conflicts_resolved:
                 print(f"  - Resolved {conflicts_resolved} ID conflicts")
-                
+
                 # Update BU files with the corrected location IDs
                 bu_updated = self._update_bu_files_after_conflict_resolution(module_name)
                 if bu_updated:
@@ -575,40 +579,40 @@ Create atmospheric travel narration that leads into this adventure."""
             print(f"Error integrating module {module_name}: {e}")
             return False
     
-    def _resolve_id_conflicts(self, module_name: str, module_data: Dict[str, Any]) -> int:
+    def _resolve_id_conflicts(self, module_name: str, module_data: Dict[str, Any], backup_dir: str) -> int:
         """Resolve area ID and location ID conflicts by modifying the new module"""
         try:
             conflicts_resolved = 0
             existing_areas = self.world_registry.get('areas', {})
             module_path = os.path.join(self.modules_dir, module_name)
-            
+
             # Check for area ID conflicts
             conflicting_areas = []
             for area_id in module_data.get('areas', {}):
                 if area_id in existing_areas:
                     conflicting_areas.append(area_id)
-            
+
             if conflicting_areas:
                 print(f"  - Found {len(conflicting_areas)} area ID conflicts: {conflicting_areas}")
-                
+
                 # Generate new unique area IDs
                 for old_area_id in conflicting_areas:
                     new_area_id = self._generate_unique_area_id(old_area_id, existing_areas, module_name)
-                    
+
                     # Update area file
                     if self._update_area_id_in_files(module_path, old_area_id, new_area_id):
                         print(f"    - Renamed area {old_area_id} -> {new_area_id}")
                         conflicts_resolved += 1
-                        
+
                         # Update existing areas registry for future conflict checks
                         existing_areas[new_area_id] = {"module": module_name}
-            
+
             # Check for location ID conflicts globally
-            location_conflicts = self._resolve_and_reprefix_location_ids(module_name, module_path)
+            location_conflicts = self._resolve_and_reprefix_location_ids(module_name, module_path, backup_dir)
             conflicts_resolved += location_conflicts
-            
+
             return conflicts_resolved
-            
+
         except Exception as e:
             print(f"DEBUG: [Module Stitcher] ERROR: Error resolving ID conflicts: {e}")
             return 0
@@ -756,13 +760,18 @@ Create atmospheric travel narration that leads into this adventure."""
             print(f"DEBUG: [Module Stitcher] ERROR: Failed to update party_tracker.json: {e}")
             return False
 
-    def _resolve_and_reprefix_location_ids(self, module_name: str, module_path: str) -> int:
+    def _resolve_and_reprefix_location_ids(self, module_name: str, module_path: str, backup_dir: str) -> int:
         """
         Ensures all location IDs in a new module are globally unique.
         If any conflict is found, it re-prefixes ALL locations in the new module.
+
+        Args:
+            module_name: Name of the module being integrated
+            module_path: Path to the module directory
+            backup_dir: Path to the backup directory created before integration
         """
         print(f"DEBUG: [Module Stitcher] Validating global uniqueness of location IDs for {module_name}...")
-        
+
         # 1. Get all existing location IDs from the world registry
         all_existing_loc_ids = set()
         for area_id in self.world_registry.get('areas', {}):
@@ -844,47 +853,61 @@ Create atmospheric travel narration that leads into this adventure."""
                 conflicts_resolved += len(updated_area_data.get('locations', []))
 
         # After re-prefixing, we need to update all references to the old IDs
-        self._update_all_location_references(module_name, new_module_loc_ids, conflicting_ids)
-        
+        self._update_all_location_references(module_name, new_module_loc_ids, conflicting_ids, backup_dir)
+
         return conflicts_resolved
     
-    def _update_all_location_references(self, module_name: str, current_ids: set, old_ids: set) -> None:
+    def _update_all_location_references(self, module_name: str, current_ids: set, old_ids: set, backup_dir: str) -> None:
         """
         Update all references to location IDs after re-prefixing.
         Does a simple search/replace across all JSON files in the module.
+
+        Args:
+            module_name: Name of the module
+            current_ids: Set of current location IDs (unused, kept for compatibility)
+            old_ids: Set of old location IDs (unused, kept for compatibility)
+            backup_dir: Path to pre-integration backup directory
         """
         try:
             module_path = os.path.join(self.modules_dir, module_name)
             areas_path = os.path.join(module_path, "areas")
-            
-            # Build ID mapping by analyzing the backup files to see what changed
+
+            # Build ID mapping by comparing backup (before integration) to current files
             id_mapping = {}
 
-            # Look at backup files to build the mapping (_BU.json files only)
-            for filename in os.listdir(areas_path):
-                if filename.endswith('_BU.json'):
-                    backup_file = os.path.join(areas_path, filename)
-                    current_file = backup_file.replace('_BU.json', '.json')
-                    
+            # Use the pre-integration backup instead of _BU.json files
+            # The backup was created BEFORE any reprefixing, so it has the original IDs
+            backup_areas_path = os.path.join(backup_dir, "areas") if backup_dir else None
+
+            if not backup_areas_path or not os.path.exists(backup_areas_path):
+                print("DEBUG: [Module Stitcher] WARNING: No backup directory found, cannot build id_mapping")
+                return
+
+            # Compare backup files (original IDs) with current files (reprefixed IDs)
+            for filename in os.listdir(backup_areas_path):
+                if filename.endswith('.json') and not filename.endswith('_BU.json'):
+                    backup_file = os.path.join(backup_areas_path, filename)
+                    current_file = os.path.join(areas_path, filename)
+
                     if os.path.exists(current_file):
                         backup_data = safe_json_load(backup_file)
                         current_data = safe_json_load(current_file)
-                        
+
                         if backup_data and current_data:
-                            # Get location IDs from backup
-                            backup_locs = [(loc.get('locationId'), loc.get('name')) 
+                            # Get location IDs from backup (original)
+                            backup_locs = [(loc.get('locationId'), loc.get('name'))
                                          for loc in backup_data.get('locations', [])]
-                            # Get location IDs from current
-                            current_locs = {loc.get('name'): loc.get('locationId') 
+                            # Get location IDs from current (reprefixed)
+                            current_locs = {loc.get('name'): loc.get('locationId')
                                           for loc in current_data.get('locations', [])}
-                            
+
                             # Map old to new based on matching names
                             for old_id, name in backup_locs:
                                 if name in current_locs:
                                     new_id = current_locs[name]
                                     if old_id != new_id and old_id and new_id:
                                         id_mapping[old_id] = new_id
-                                        print(f"DEBUG: [Module Stitcher] Mapping {old_id} -> {new_id} (from {filename})")
+                                        print(f"DEBUG: [Module Stitcher] Mapping {old_id} -> {new_id} (from backup {filename})")
             
             if not id_mapping:
                 return
