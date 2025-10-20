@@ -524,15 +524,6 @@ Create atmospheric travel narration that leads into this adventure."""
                 if bu_updated:
                     print(f"  - Updated {bu_updated} BU files with corrected location IDs")
 
-                # Validate and repair connectivity after ID changes
-                print(f"  - Validating connectivity...")
-                from core.validation.connectivity_repair import validate_and_repair_module
-                connectivity_valid = validate_and_repair_module(module_name, auto_repair=True)
-                if connectivity_valid:
-                    print(f"  - Connectivity validated and repaired (if needed)")
-                else:
-                    print(f"  - WARNING: Connectivity issues detected but could not be fully repaired")
-
                 # Re-analyze module after ID changes
                 module_data = self.analyze_module(module_name)
                 if not module_data:
