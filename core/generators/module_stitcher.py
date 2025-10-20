@@ -992,6 +992,25 @@ Create atmospheric travel narration that leads into this adventure."""
                 except Exception as tracker_error:
                     print(f"DEBUG: [Module Stitcher] WARNING: Could not update party_tracker.json: {tracker_error}")
 
+            # CRITICAL: Update cached startingLocation in world_registry if it was renamed
+            try:
+                if module_name in self.world_registry.get('modules', {}):
+                    module_entry = self.world_registry['modules'][module_name]
+                    starting_loc = module_entry.get('startingLocation', {})
+                    starting_loc_id = starting_loc.get('locationId')
+
+                    # If the cached starting location ID was renamed, update it
+                    if starting_loc_id and starting_loc_id in id_mapping:
+                        new_starting_loc_id = id_mapping[starting_loc_id]
+                        starting_loc['locationId'] = new_starting_loc_id
+                        module_entry['startingLocation'] = starting_loc
+
+                        # Save updated world registry
+                        safe_json_dump(self.world_registry, self.world_registry_file)
+                        print(f"DEBUG: [Module Stitcher] Updated world_registry startingLocation: {starting_loc_id} -> {new_starting_loc_id}")
+            except Exception as registry_error:
+                print(f"DEBUG: [Module Stitcher] WARNING: Could not update world_registry startingLocation: {registry_error}")
+
         except Exception as e:
             print(f"DEBUG: [Module Stitcher] ERROR: Failed to update location references: {e}")
     
