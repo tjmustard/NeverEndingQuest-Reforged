@@ -114,13 +114,16 @@ class ModuleStitcher:
     
     def __init__(self):
         """Initialize module stitcher"""
-        self.modules_dir = "modules"
-        self.world_registry_file = "modules/world_registry.json"
+        # Use absolute paths to ensure consistency regardless of working directory
+        self.modules_dir = os.path.abspath("modules")
+        self.root_dir = os.path.dirname(self.modules_dir)
+        self.world_registry_file = os.path.join(self.modules_dir, "world_registry.json")
+        self.party_tracker_file = os.path.join(self.root_dir, "party_tracker.json")
         self.client = OpenAI(api_key=config.OPENAI_API_KEY)
-        
+
         # Ensure directories exist
         os.makedirs(self.modules_dir, exist_ok=True)
-        
+
         # Load or create world registry
         self.world_registry = self._load_world_registry()
         
@@ -725,8 +728,8 @@ Create atmospheric travel narration that leads into this adventure."""
             # Extract module name from module path
             module_name = os.path.basename(module_path)
 
-            # Load party_tracker.json from root directory
-            party_tracker_path = 'party_tracker.json'
+            # Load party_tracker.json from root directory using absolute path
+            party_tracker_path = self.party_tracker_file
             if not os.path.exists(party_tracker_path):
                 return False
 
@@ -974,7 +977,7 @@ Create atmospheric travel narration that leads into this adventure."""
                     print(f"DEBUG: [Module Stitcher] WARNING: Could not update module_plot.json: {plot_error}")
 
             # CRITICAL: Update party_tracker.json if this module is currently active
-            party_tracker_path = 'party_tracker.json'
+            party_tracker_path = self.party_tracker_file
             if os.path.exists(party_tracker_path):
                 try:
                     party_tracker = safe_json_load(party_tracker_path)
