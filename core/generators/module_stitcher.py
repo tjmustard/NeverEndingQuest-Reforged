@@ -804,12 +804,12 @@ Create atmospheric travel narration that leads into this adventure."""
             
             # Build ID mapping by analyzing the backup files to see what changed
             id_mapping = {}
-            
-            # Look at backup files to build the mapping
+
+            # Look at backup files to build the mapping (_BU.json files only)
             for filename in os.listdir(areas_path):
-                if filename.endswith('.json.bak'):
+                if filename.endswith('_BU.json'):
                     backup_file = os.path.join(areas_path, filename)
-                    current_file = backup_file.replace('.json.bak', '.json')
+                    current_file = backup_file.replace('_BU.json', '.json')
                     
                     if os.path.exists(current_file):
                         backup_data = safe_json_load(backup_file)
