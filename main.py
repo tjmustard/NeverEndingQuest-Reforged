@@ -999,6 +999,12 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
                 elif not location_graph:
                     path_info = f"Path Validation ERROR: Location graph not initialized."
                 else:
+                    # Check if location_graph is empty and reload if needed
+                    if len(location_graph.nodes) == 0:
+                        print("DEBUG: [LocationGraph] Global graph is empty, reloading...")
+                        location_graph.load_module_data()
+                        print(f"DEBUG: [LocationGraph] Reload complete. Total nodes: {len(location_graph.nodes)}")
+
                     # Validate path using location graph
                     print(f"DEBUG: [LocationGraph] Path validation - From: {current_origin}, To: {destination}")
                     print(f"DEBUG: [LocationGraph] Current graph state - Nodes: {len(location_graph.nodes)}, Has origin: {current_origin in location_graph.nodes}")
