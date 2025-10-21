@@ -835,7 +835,7 @@ Create atmospheric travel narration that leads into this adventure."""
         conflicts_resolved = 0
         
         for i, area_filename in enumerate(sorted_new_area_files):
-            if not area_filename.endswith(".json"):
+            if not area_filename.endswith(".json") or area_filename.endswith("_BU.json"):
                 continue
 
             # Generate a new, globally unique prefix
@@ -853,142 +853,100 @@ Create atmospheric travel narration that leads into this adventure."""
                 conflicts_resolved += len(updated_area_data.get('locations', []))
 
         # After re-prefixing, we need to update all references to the old IDs
-        self._update_all_location_references(module_name, new_module_loc_ids, conflicting_ids, backup_dir)
+        self._update_all_location_references(module_name, backup_dir)
 
         return conflicts_resolved
     
-    def _update_all_location_references(self, module_name: str, current_ids: set, old_ids: set, backup_dir: str) -> None:
+    def _recursively_update_ids_in_json(self, data: Any, id_mapping: Dict[str, str], exclude_keys: List[str] = None) -> Any:
         """
-        Update all references to location IDs after re-prefixing.
-        Does a simple search/replace across all JSON files in the module.
+        Safely traverses a JSON structure (dict/list) and applies the id_mapping to string values,
+        while skipping any keys specified in exclude_keys.
+        """
+        if exclude_keys is None:
+            exclude_keys = []
 
-        Args:
-            module_name: Name of the module
-            current_ids: Set of current location IDs (unused, kept for compatibility)
-            old_ids: Set of old location IDs (unused, kept for compatibility)
-            backup_dir: Path to pre-integration backup directory
+        if isinstance(data, dict):
+            new_dict = {}
+            for key, value in data.items():
+                if key in exclude_keys:
+                    new_dict[key] = value  # Keep original value without recursion
+                else:
+                    new_dict[key] = self._recursively_update_ids_in_json(value, id_mapping, exclude_keys)
+            return new_dict
+        elif isinstance(data, list):
+            return [self._recursively_update_ids_in_json(item, id_mapping, exclude_keys) for item in data]
+        elif isinstance(data, str):
+            # Apply mapping if the string is an ID that needs mapping
+            return id_mapping.get(data, data)
+        else:
+            # Return non-string, non-collection types as is
+            return data
+
+    def _update_all_location_references(self, module_name: str, backup_dir: str) -> None:
+        """
+        Update all internal references to location IDs after re-prefixing using a safe, recursive JSON traversal.
+        This function avoids blind text replacement to prevent corrupting external references like 'areaConnectivityId'.
         """
         try:
             module_path = os.path.join(self.modules_dir, module_name)
-            areas_path = os.path.join(module_path, "areas")
-
-            # Build ID mapping by comparing backup (before integration) to current files
             id_mapping = {}
 
-            # Use the pre-integration backup instead of _BU.json files
-            # The backup was created BEFORE any reprefixing, so it has the original IDs
+            # Build ID mapping by comparing backup (before integration) to current files
             backup_areas_path = os.path.join(backup_dir, "areas") if backup_dir else None
-
             if not backup_areas_path or not os.path.exists(backup_areas_path):
-                print("DEBUG: [Module Stitcher] WARNING: No backup directory found, cannot build id_mapping")
+                print(f"DEBUG: [Module Stitcher] WARNING: No backup directory found for {module_name}, cannot build ID mapping for reference updates.")
                 return
 
-            # Compare backup files (original IDs) with current files (reprefixed IDs)
+            current_areas_path = os.path.join(module_path, "areas")
+
+            # Compare backup files (original IDs) with current files (re-prefixed IDs)
             for filename in os.listdir(backup_areas_path):
                 if filename.endswith('.json') and not filename.endswith('_BU.json'):
                     backup_file = os.path.join(backup_areas_path, filename)
-                    current_file = os.path.join(areas_path, filename)
+                    # The filename in the current dir should be the same
+                    current_file = os.path.join(current_areas_path, filename)
 
                     if os.path.exists(current_file):
                         backup_data = safe_json_load(backup_file)
                         current_data = safe_json_load(current_file)
 
                         if backup_data and current_data:
-                            # Get location IDs from backup (original)
-                            backup_locs = [(loc.get('locationId'), loc.get('name'))
-                                         for loc in backup_data.get('locations', [])]
-                            # Get location IDs from current (reprefixed)
-                            current_locs = {loc.get('name'): loc.get('locationId')
-                                          for loc in current_data.get('locations', [])}
+                            # Map old to new based on matching location names, which are assumed to be stable
+                            backup_locs = {loc.get('name'): loc.get('locationId') for loc in backup_data.get('locations', []) if loc.get('name') and loc.get('locationId')}
+                            current_locs = {loc.get('name'): loc.get('locationId') for loc in current_data.get('locations', []) if loc.get('name') and loc.get('locationId')}
 
-                            # Map old to new based on matching names
-                            for old_id, name in backup_locs:
+                            for name, old_id in backup_locs.items():
                                 if name in current_locs:
                                     new_id = current_locs[name]
-                                    if old_id != new_id and old_id and new_id:
+                                    if old_id != new_id:
                                         id_mapping[old_id] = new_id
-                                        print(f"DEBUG: [Module Stitcher] Mapping {old_id} -> {new_id} (from backup {filename})")
             
             if not id_mapping:
+                print(f"DEBUG: [Module Stitcher] No location ID changes detected for {module_name}. Skipping reference update.")
                 return
             
-            # Update all JSON files in the module - both text replacement AND explicit array updates
-            for root, dirs, files in os.walk(module_path):
+            print(f"DEBUG: [Module Stitcher] Built ID mapping with {len(id_mapping)} entries for {module_name}. Applying updates...")
+
+            # Walk through all JSON files in the module and apply the mapping safely
+            for root, _, files in os.walk(module_path):
                 for filename in files:
-                    if filename.endswith('.json') and not filename.endswith('.bak'):
+                    if filename.endswith('.json') and not filename.endswith('.bak') and not filename.endswith('_BU.json'):
                         file_path = os.path.join(root, filename)
-
-                        # For area files, do explicit JSON updates for areaConnectivityId
-                        if 'areas' in file_path and file_path.endswith('.json'):
-                            area_data = safe_json_load(file_path)
-                            if area_data and 'locations' in area_data:
-                                modified = False
-                                for location in area_data['locations']:
-                                    # Update areaConnectivityId arrays explicitly
-                                    if 'areaConnectivityId' in location:
-                                        old_ids = location['areaConnectivityId']
-                                        new_ids = [id_mapping.get(old_id, old_id) for old_id in old_ids]
-                                        if old_ids != new_ids:
-                                            location['areaConnectivityId'] = new_ids
-                                            modified = True
-                                            print(f"DEBUG: [Module Stitcher] Updated areaConnectivityId in {location.get('locationId')}: {old_ids} -> {new_ids}")
-
-                                if modified:
-                                    safe_json_dump(area_data, file_path)
-                                    print(f"DEBUG: [Module Stitcher] Saved updated connectivity in {os.path.basename(file_path)}")
-
-                        # Also do text-based replacement for other references
-                        # Read file content
-                        with open(file_path, 'r', encoding='utf-8') as f:
-                            content = f.read()
-
-                        # Replace all old IDs with new IDs
-                        original_content = content
-                        for old_id, new_id in id_mapping.items():
-                            # Use word boundaries to ensure we match exact IDs
-                            # This prevents A01 from matching within BA01
-                            import re
-                            pattern = r'\b' + re.escape(old_id) + r'\b'
-                            content = re.sub(pattern, new_id, content)
-
-                        # Write back if changed
-                        if content != original_content:
-                            with open(file_path, 'w', encoding='utf-8') as f:
-                                f.write(content)
-                            print(f"DEBUG: [Module Stitcher] Updated text references in {os.path.relpath(file_path, module_path)}")
-
-            # Update module_plot.json if it exists
-            plot_file_path = os.path.join(module_path, 'module_plot.json')
-            if os.path.exists(plot_file_path):
-                try:
-                    plot_data = safe_json_load(plot_file_path)
-                    if plot_data:
-                        plot_modified = False
-
-                        # Update plotPoints[].location
-                        for plot_point in plot_data.get('plotPoints', []):
-                            if 'location' in plot_point and plot_point['location'] in id_mapping:
-                                old_loc = plot_point['location']
-                                new_loc = id_mapping[old_loc]
-                                plot_point['location'] = new_loc
-                                plot_modified = True
-                                print(f"DEBUG: [Module Stitcher] Updated plot point {plot_point.get('id')} location: {old_loc} -> {new_loc}")
-
-                            # Update sideQuests[].involvedLocations
-                            for side_quest in plot_point.get('sideQuests', []):
-                                if 'involvedLocations' in side_quest:
-                                    old_locs = side_quest['involvedLocations']
-                                    new_locs = [id_mapping.get(loc, loc) for loc in old_locs]
-                                    if old_locs != new_locs:
-                                        side_quest['involvedLocations'] = new_locs
-                                        plot_modified = True
-                                        print(f"DEBUG: [Module Stitcher] Updated side quest {side_quest.get('id')} locations: {old_locs} -> {new_locs}")
-
-                        if plot_modified:
-                            safe_json_dump(plot_data, plot_file_path)
-                            print(f"DEBUG: [Module Stitcher] Updated module_plot.json with new location IDs")
-                except Exception as plot_error:
-                    print(f"DEBUG: [Module Stitcher] WARNING: Could not update module_plot.json: {plot_error}")
+                        try:
+                            data = safe_json_load(file_path)
+                            if not data:
+                                continue
+                            
+                            # Apply the recursive update, excluding areaConnectivityId to protect external links
+                            updated_data = self._recursively_update_ids_in_json(data, id_mapping, exclude_keys=['areaConnectivityId'])
+                            
+                            # Check if any changes were made before writing
+                            if data != updated_data:
+                                safe_json_dump(updated_data, file_path)
+                                print(f"DEBUG: [Module Stitcher] Updated location ID references in {os.path.relpath(file_path, module_path)}")
+                        
+                        except Exception as e:
+                            print(f"DEBUG: [Module Stitcher] WARNING: Could not process {file_path} for ID updates: {e}")
 
             # CRITICAL: Update party_tracker.json if this module is currently active
             party_tracker_path = self.party_tracker_file
@@ -998,44 +956,21 @@ Create atmospheric travel narration that leads into this adventure."""
                     if party_tracker:
                         active_module = party_tracker.get('module', '').replace(' ', '_')
 
-                        # Check if the renamed module is the currently active one
                         if active_module == module_name:
                             world_conditions = party_tracker.get('worldConditions', {})
                             current_location_id = world_conditions.get('currentLocationId')
 
-                            # If current location ID was renamed, update it
                             if current_location_id and current_location_id in id_mapping:
                                 new_location_id = id_mapping[current_location_id]
                                 world_conditions['currentLocationId'] = new_location_id
                                 party_tracker['worldConditions'] = world_conditions
-
-                                # Save updated party tracker
                                 safe_json_dump(party_tracker, party_tracker_path)
                                 print(f"DEBUG: [Module Stitcher] Updated party_tracker.json: {current_location_id} -> {new_location_id}")
                 except Exception as tracker_error:
                     print(f"DEBUG: [Module Stitcher] WARNING: Could not update party_tracker.json: {tracker_error}")
 
-            # CRITICAL: Update cached startingLocation in world_registry if it was renamed
-            try:
-                if module_name in self.world_registry.get('modules', {}):
-                    module_entry = self.world_registry['modules'][module_name]
-                    starting_loc = module_entry.get('startingLocation', {})
-                    starting_loc_id = starting_loc.get('locationId')
-
-                    # If the cached starting location ID was renamed, update it
-                    if starting_loc_id and starting_loc_id in id_mapping:
-                        new_starting_loc_id = id_mapping[starting_loc_id]
-                        starting_loc['locationId'] = new_starting_loc_id
-                        module_entry['startingLocation'] = starting_loc
-
-                        # Save updated world registry
-                        safe_json_dump(self.world_registry, self.world_registry_file)
-                        print(f"DEBUG: [Module Stitcher] Updated world_registry startingLocation: {starting_loc_id} -> {new_starting_loc_id}")
-            except Exception as registry_error:
-                print(f"DEBUG: [Module Stitcher] WARNING: Could not update world_registry startingLocation: {registry_error}")
-
         except Exception as e:
-            print(f"DEBUG: [Module Stitcher] ERROR: Failed to update location references: {e}")
+            print(f"DEBUG: [Module Stitcher] ERROR: Failed to update location references for {module_name}: {e}")
     
     def _validate_module_safety(self, module_name: str, module_data: Dict[str, Any]) -> bool:
         """Validate module for safety issues using AI content filtering"""
