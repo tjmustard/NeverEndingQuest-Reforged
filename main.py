@@ -2761,6 +2761,11 @@ def main_game_loop():
     
         module_data = load_json_file(current_path_manager.get_module_file_path())
 
+        # CRITICAL: Reload party_tracker to get latest data after module integration
+        # Module stitcher may have updated location IDs during integration
+        party_tracker_data = load_json_file("party_tracker.json")
+        print(f"DEBUG: [Before first update_conversation_history] Reloaded party tracker after integration. Location: {party_tracker_data.get('worldConditions', {}).get('currentLocationId', 'Unknown')}")
+
         conversation_history = ensure_main_system_prompt(conversation_history, main_system_prompt_text)
         debug(f"STATE_CHANGE: Before update_conversation_history - history has {len(conversation_history)} messages", category="conversation_management")
         conversation_history = update_conversation_history(conversation_history, party_tracker_data, plot_data, module_data)
