@@ -937,8 +937,8 @@ Create atmospheric travel narration that leads into this adventure."""
                             if not data:
                                 continue
                             
-                            # Apply the recursive update, excluding areaConnectivityId to protect external links
-                            updated_data = self._recursively_update_ids_in_json(data, id_mapping, exclude_keys=['areaConnectivityId'])
+                            # Apply the recursive update (id_mapping only contains current module IDs, so external links are safe)
+                            updated_data = self._recursively_update_ids_in_json(data, id_mapping)
                             
                             # Check if any changes were made before writing
                             if data != updated_data:
