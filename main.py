@@ -149,14 +149,8 @@ from config import (
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
-# Initialize location graph for path validation
-print("DEBUG: [LocationGraph] Initializing location graph at startup...")
-location_graph = LocationGraph()
-print("DEBUG: [LocationGraph] Loading module data...")
-location_graph.load_module_data()
-print(f"DEBUG: [LocationGraph] Initialization complete. Total nodes loaded: {len(location_graph.nodes)}")
-print(f"DEBUG: [LocationGraph] Total edges loaded: {sum(len(edges) for edges in location_graph.edges.values())}")
-print(f"DEBUG: [LocationGraph] First 5 location IDs: {list(location_graph.nodes.keys())[:5]}")
+# LocationGraph will be initialized inside main() after modules are integrated
+location_graph = None
 
 # Temperature Configuration (remains the same)
 TEMPERATURE = 0.8
@@ -1002,7 +996,7 @@ def validate_ai_response(primary_response, user_input, validation_prompt_text, c
                     # Check if location_graph is empty and reload if needed
                     if len(location_graph.nodes) == 0:
                         print("DEBUG: [LocationGraph] Global graph is empty, reloading...")
-                        location_graph.load_module_data()
+                        location_graph.reload()
                         print(f"DEBUG: [LocationGraph] Reload complete. Total nodes: {len(location_graph.nodes)}")
 
                     # Validate path using location graph
@@ -3737,7 +3731,19 @@ def main():
     except Exception as e:
         warning(f"INITIALIZATION: Startup wizard had an issue", category="startup")
         print("Continuing with main game (assuming setup is complete)...\n")
-    
+
+    # Initialize the global location graph AFTER all modules are stitched and ready
+    global location_graph
+    print("DEBUG: [LocationGraph] Initializing global graph for game session...")
+    location_graph = LocationGraph()
+    location_graph.load_module_data()
+    print(f"DEBUG: [LocationGraph] Initialization complete. Total nodes loaded: {len(location_graph.nodes)}")
+    print(f"DEBUG: [LocationGraph] Total edges loaded: {sum(len(edges) for edges in location_graph.edges.values())}")
+    if len(location_graph.nodes) > 0:
+        print(f"DEBUG: [LocationGraph] First 5 location IDs: {list(location_graph.nodes.keys())[:5]}")
+    else:
+        print("DEBUG: [LocationGraph] WARNING - No nodes loaded! Check if modules are integrated.")
+
     # Continue with normal game loop
     main_game_loop()
 

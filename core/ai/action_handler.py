@@ -877,11 +877,18 @@ def process_action(action, party_tracker_data, location_data, conversation_histo
         current_area_name = party_tracker_data["worldConditions"]["currentArea"]
         current_area_id = party_tracker_data["worldConditions"]["currentAreaId"]
         
-        # Initialize location graph for validation
-        print("DEBUG: [LocationGraph] WARNING - Creating NEW LocationGraph instance in action_handler (not using global)")
-        location_graph = LocationGraph()
-        location_graph.load_module_data()
-        print(f"DEBUG: [LocationGraph] action_handler local graph loaded with {len(location_graph.nodes)} nodes")
+        # Use the global location graph for validation
+        from main import location_graph
+        if location_graph is None or len(location_graph.nodes) == 0:
+            print("DEBUG: [LocationGraph] WARNING - Global graph is empty or uninitialized. Triggering emergency reload.")
+            if location_graph is None:
+                # Graph was never initialized - create it now
+                location_graph = LocationGraph()
+                location_graph.load_module_data()
+            else:
+                # Graph exists but is empty - reload it
+                location_graph.reload()
+        print(f"DEBUG: [LocationGraph] Using global graph with {len(location_graph.nodes)} nodes")
         
         # MAP: Convert area ID to entry location ID if needed (TW001 -> TW01)
         if not location_graph.validate_location_id_format(new_location_name_or_id):

@@ -92,7 +92,18 @@ class LocationGraph:
         self.area_data = {}  # area_id -> area_data
         self.id_to_name = {}  # location_id -> location_name
         self.name_to_id = {}  # location_name -> location_id
-        
+
+    def reload(self):
+        """Clears and reloads all module data for the graph."""
+        print("DEBUG: [LocationGraph.reload] Reloading all graph data...")
+        self.nodes = {}
+        self.edges = defaultdict(list)
+        self.area_data = {}
+        self.id_to_name = {}
+        self.name_to_id = {}
+        self.load_module_data()
+        print(f"DEBUG: [LocationGraph.reload] Reload complete. Total nodes: {len(self.nodes)}")
+
     def load_module_data(self):
         """Load all area data and build the graph"""
         print("DEBUG: [LocationGraph.load_module_data] Starting to load module data...")
