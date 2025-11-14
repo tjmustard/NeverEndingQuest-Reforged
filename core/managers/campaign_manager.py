@@ -137,7 +137,14 @@ class CampaignManager:
             # Get module stitcher and scan for new modules
             stitcher = get_module_stitcher()
             newly_integrated = stitcher.scan_and_integrate_new_modules()
-            
+
+            # CRITICAL: Reload party_tracker after integration (may have updated location IDs)
+            # Store in instance for use by calling code
+            self.party_tracker_data = safe_json_load("party_tracker.json")
+            if self.party_tracker_data and newly_integrated:
+                updated_loc = self.party_tracker_data.get('worldConditions', {}).get('currentLocationId', 'Unknown')
+                info(f"INITIALIZATION: Reloaded party tracker after integration. Location: {updated_loc}", category="module_loading")
+
             # Also sync with existing modules in world registry
             world_registry = stitcher.world_registry
             if world_registry and 'modules' in world_registry:
