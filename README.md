@@ -456,6 +456,83 @@ The compression system enables deployment with popular open-source models:
 4. Adjust context window settings for your model
 5. Run game normally - compression handles adaptation
 
+#### 🧪 EXPERIMENTAL: LM Studio Integration
+
+**Status**: EXPERIMENTAL - May experience issues with complex game mechanics
+
+NeverEndingQuest now includes experimental support for running with [LM Studio](https://lmstudio.ai/) for completely local, offline gameplay with zero API costs.
+
+**⚠️ IMPORTANT LIMITATIONS:**
+
+This integration is **experimental** and has known limitations:
+
+1. **Prompt Compatibility**: All system prompts and compression technology were designed and optimized exclusively for ChatGPT/GPT-4 architecture. Local models may:
+   - Produce malformed JSON action structures
+   - Fail to follow complex game mechanics properly
+   - Generate inconsistent SRD 5.2.1 rule interpretations
+   - Struggle with the compressed @TAG notation format
+
+2. **Token Requirements**:
+   - **Minimum 32K context window required** (64K+ recommended)
+   - Models with smaller contexts will fail during extended gameplay
+   - Parallel request handling may exceed context limits
+
+3. **Memory & Performance**:
+   - **Use quantized models** (Q4_K_M or Q5_K_M) to reduce VRAM usage
+   - 7B models: Require 16GB+ system RAM
+   - 13B models: Require 32GB+ system RAM
+   - Parallel API requests may cause memory spikes
+
+4. **Game Mechanics**:
+   - Combat system relies on precise JSON formatting from SRD 5.2.1 licensed game content
+   - Character progression uses SRD 5.2.1 rules (may not be in model training data)
+   - Module transitions require exact action detection
+   - NPC dialogue and quest tracking depend on GPT instruction-following
+
+**Recommended Models** (best compatibility):
+- **Mistral 7B Instruct v0.3** - 32K context, good instruction following
+- **Llama 3.1 8B Instruct** - 128K context, excellent for long sessions
+- **Mistral Nemo 12B** - 128K context, strong storytelling
+
+**Quick Start** (Windows):
+
+1. **Install LM Studio** from [lmstudio.ai](https://lmstudio.ai/)
+2. **Load a model** (recommended: Mistral 7B Instruct or Llama 3.1 8B)
+3. **Start LM Studio server** (click "Start Server" in Local Server tab)
+4. **Verify configuration**:
+   - Server address: `http://127.0.0.1:1234`
+   - Model loaded and active
+   - Context length set to maximum (32K+)
+5. **Install proxy**: `pip install mitmproxy` (included in requirements.txt)
+6. **Launch**: Double-click `launch_lmstudio_mode.bat`
+
+**Configuration Verification**:
+
+Make sure your LM Studio settings match:
+```
+API Endpoint: http://127.0.0.1:1234/v1
+Model Identifier: <your-loaded-model>
+Context Length: 32768 or higher
+```
+
+The proxy system in `lmstudio_forwarder.py` will automatically redirect all OpenAI API calls to your local LM Studio instance on port 1234.
+
+**Temperature Settings Note**: The game controls temperature settings through the proxy. If you experience JSON formatting errors or poor prompt adherence, you can lower the temperature in LM Studio's server settings to improve accuracy, though this may reduce narrative creativity and storytelling immersion.
+
+**Known Issues**:
+- JSON parsing errors during complex combat
+- Inconsistent action detection compared to GPT-4
+- May require manual intervention for edge cases
+- Slower response times on CPU-only systems
+- Parallel requests may cause response delays or errors
+
+**Documentation**:
+- Complete setup guide: `LMSTUDIO_SETUP.md`
+- Quick reference: `LMSTUDIO_QUICKSTART.txt`
+- Configuration help: Edit `lmstudio_forwarder.py` lines 19-22
+
+**Support**: LM Studio mode is provided as-is for experimentation. For production gameplay, we recommend using OpenAI's API with the compression system for optimal experience.
+
 ### Performance Metrics Summary
 
 | Component | Original Size | Compressed Size | Reduction |
