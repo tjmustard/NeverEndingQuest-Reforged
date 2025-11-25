@@ -228,8 +228,8 @@ See [LICENSING.md](LICENSING.md) for complete details, FAQ, and legal informatio
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/MoonlightByte/NeverEndingQuest.git
-   cd NeverEndingQuest
+   git clone https://github.com/tjmustard/NeverEndingQuest-Reforged
+   cd NeverEndingQuest-Reforged
    ```
 
 2. **Create and activate a virtual environment**
