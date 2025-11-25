@@ -10,13 +10,13 @@ Compresses location JSON into compact structured format
 import json
 import re
 from typing import Dict, Any, List, Optional
-from openai import OpenAI
+from core.ai.llm_client import get_llm_client
 
 # Load configuration
 try:
     import config
     from model_config import LOCATION_COMPRESSION_MODEL
-    client = OpenAI(api_key=config.OPENAI_API_KEY)
+    client = get_llm_client()
 except ImportError:
     raise ImportError("Missing config.py or model_config.py")
 

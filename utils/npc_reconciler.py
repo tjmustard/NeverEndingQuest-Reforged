@@ -6,8 +6,8 @@ import re
 from utils.module_path_manager import ModulePathManager
 from utils.file_operations import safe_read_json, safe_write_json
 from utils.module_context import ModuleContext
-from openai import OpenAI
-from config import OPENAI_API_KEY, DM_MINI_MODEL
+from core.ai.llm_client import get_llm_client
+from config import DM_MINI_MODEL
 
 class NpcReconciler:
     """
@@ -20,7 +20,7 @@ class NpcReconciler:
         self.context = None
         self.canonical_map = {}
         # --- ADD THIS LINE ---
-        self.client = OpenAI(api_key=OPENAI_API_KEY)
+        self.client = get_llm_client()
 
     def load_context(self):
         """Loads the module context and builds a map of all aliases to their canonical name."""

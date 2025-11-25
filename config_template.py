@@ -44,8 +44,29 @@
 # Import model configuration settings
 from model_config import *
 
-# WARNING: Replace with your actual OpenAI API key and move to environment variables in production
-OPENAI_API_KEY = "your_openai_api_key_here"
+# WARNING: Replace with your actual API key and move to environment variables in production
+# Provider-specific API Keys
+OPENAI_API_KEY = "your-api-key-here"
+GEMINI_API_KEY = "your-gemini-api-key-here"
+
+# Ollama Configuration
+OLLAMA_BASE_URL = "http://localhost:11434"
+
+# LLM Provider Selection
+# Options: "openai", "gemini", "ollama"
+LLM_PROVIDER = "openai"
+
+# Automatic API Key Selection
+# LLM_API_KEY automatically points to the correct key based on LLM_PROVIDER
+# This makes it easier to switch providers without changing code
+if LLM_PROVIDER == "openai":
+    LLM_API_KEY = OPENAI_API_KEY
+elif LLM_PROVIDER == "gemini":
+    LLM_API_KEY = GEMINI_API_KEY
+elif LLM_PROVIDER == "ollama":
+    LLM_API_KEY = None  # Ollama doesn't require an API key
+else:
+    LLM_API_KEY = OPENAI_API_KEY  # Default to OpenAI
 
 # --- Module folder structure ---
 MODULES_DIR = "modules"

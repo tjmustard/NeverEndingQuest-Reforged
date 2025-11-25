@@ -9,7 +9,7 @@ import os
 import sys
 from datetime import datetime
 from typing import List, Dict, Optional, Tuple
-from openai import OpenAI
+from core.ai.llm_client import get_llm_client
 import shutil
 
 # Add project root to path for standalone execution
@@ -24,7 +24,7 @@ class IncrementalLocationCompressor:
     """Handles incremental compression of messages at current location."""
     
     def __init__(self):
-        self.client = OpenAI(api_key=config.OPENAI_API_KEY)
+        self.client = get_llm_client()
         self.COMPRESSION_MODEL = "gpt-4.1-mini-2025-04-14"
         self.COMPRESSION_TEMP = 0.3
         self.TRIGGER_THRESHOLD = 15  # Compress when reaching 15 pairs

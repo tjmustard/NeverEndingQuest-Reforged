@@ -4,7 +4,7 @@ Prompt sanitization for DALL-E content policy violations.
 Only used after a failure - no pre-processing.
 """
 
-from openai import OpenAI
+from core.ai.llm_client import get_llm_client
 import config
 import re
 from model_config import DM_MINI_MODEL
@@ -14,7 +14,7 @@ def sanitize_prompt(prompt: str) -> str:
     Sanitize a prompt that was rejected by DALL-E.
     Uses GPT-4-mini to clean problematic content while preserving narrative.
     """
-    client = OpenAI(api_key=config.OPENAI_API_KEY)
+    client = get_llm_client()
     
     sanitization_request = """You are a prompt sanitizer for DALL-E 3. The following prompt was rejected for content policy violations.
 

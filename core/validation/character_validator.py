@@ -65,7 +65,7 @@ import os
 import hashlib
 from datetime import datetime
 from typing import Dict, List, Any, Optional
-from openai import OpenAI
+from core.ai.llm_client import get_llm_client
 
 # Import OpenAI usage tracking (safe - won't break if fails)
 try:
@@ -74,7 +74,7 @@ try:
 except:
     USAGE_TRACKING_AVAILABLE = False
     def track_response(r): pass
-from config import OPENAI_API_KEY, CHARACTER_VALIDATOR_MODEL
+from config import CHARACTER_VALIDATOR_MODEL
 from utils.file_operations import safe_read_json, safe_write_json
 from utils.enhanced_logger import debug, info, warning, error, set_script_name
 
@@ -86,7 +86,7 @@ class AICharacterValidator:
         """Initialize AI-powered validator with caching"""
         self.logger = logging.getLogger(__name__)
         try:
-            self.client = OpenAI(api_key=OPENAI_API_KEY)
+            self.client = get_llm_client()
         except Exception as e:
             # Handle OpenAI client initialization error
             error(f"Failed to initialize OpenAI client: {str(e)}", exception=e, category="character_validation")

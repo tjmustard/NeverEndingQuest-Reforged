@@ -12,8 +12,7 @@ Uses AI to convert DM-oriented quest descriptions into immersive player-friendly
 import json
 import os
 from datetime import datetime
-from openai import OpenAI
-from config import OPENAI_API_KEY
+from core.ai.llm_client import get_llm_client
 from model_config import DM_MINI_MODEL
 from utils.module_path_manager import ModulePathManager
 from utils.file_operations import safe_read_json, safe_write_json
@@ -24,7 +23,7 @@ from utils.encoding_utils import sanitize_text
 set_script_name("quest_player_formatter")
 
 # Initialize OpenAI client
-client = OpenAI(api_key=OPENAI_API_KEY)
+client = get_llm_client()
 
 # Constants - model is imported from model_config
 TEMPERATURE = 0.3

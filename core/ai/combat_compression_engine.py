@@ -11,7 +11,7 @@ No validation needed since output is for AI context only, not actions.
 import json
 import hashlib
 import re
-from openai import OpenAI
+from core.ai.llm_client import get_llm_client
 from typing import Dict, Optional
 from pathlib import Path
 import sys
@@ -105,20 +105,20 @@ class CombatCompressor:
         """Initialize compressor."""
         # Get API key from environment or config
         if api_key is None:
-            api_key = os.environ.get('OPENAI_API_KEY')
+            api_key = os.environ.get('LLM_API_KEY')
         
         if api_key is None:
             try:
                 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
                 import config
-                api_key = getattr(config, 'OPENAI_API_KEY', None)
+                api_key = getattr(config, 'LLM_API_KEY', None)
             except:
                 pass
         
         if not api_key:
             raise ValueError("OpenAI API key required")
         
-        self.client = OpenAI(api_key=api_key)
+        self.client = get_llm_client()
         self.model = NARRATIVE_COMPRESSION_MODEL
         self.enable_caching = enable_caching
         self.cache_file = Path("modules/conversation_history/combat_compression_cache.json")
@@ -214,7 +214,7 @@ class CombatCompressor:
             
             # Check if it's an API key issue
             if "api_key" in str(e).lower() or "authentication" in str(e).lower():
-                print(f"[ERROR] API key issue detected - check OPENAI_API_KEY")
+                print(f"[ERROR] API key issue detected - check LLM_API_KEY")
             elif "rate" in str(e).lower():
                 print(f"[ERROR] Rate limit issue - compression will be skipped")
             

@@ -8,15 +8,15 @@ are appropriate given exploration status, encounters, and plot progression.
 import json
 import os
 from typing import Dict, List, Any, Optional
-from openai import OpenAI
-from config import OPENAI_API_KEY
+from core.ai.llm_client import get_llm_client
+from config import LLM_API_KEY
 from model_config import TRANSITION_VALIDATOR_MODEL, TRANSITION_VALIDATOR_TEMPERATURE
 from utils.enhanced_logger import debug, info, warning, error
 from utils.file_operations import safe_read_json
 
 
 # Initialize OpenAI client
-client = OpenAI(api_key=OPENAI_API_KEY)
+client = get_llm_client()
 
 
 def load_transition_validation_prompt() -> str:

@@ -120,7 +120,7 @@ import subprocess
 from model_config import USE_COMPRESSED_COMBAT
 from datetime import datetime
 from utils.xp import main as calculate_xp
-from openai import OpenAI
+from core.ai.llm_client import get_llm_client
 
 # Import OpenAI usage tracking (safe - won't break if fails)
 try:
@@ -134,7 +134,7 @@ except Exception as e:
     def get_usage_stats(): return {}
 # Import model configurations from config.py
 from config import (
-    OPENAI_API_KEY,
+    LLM_API_KEY,
     COMBAT_MAIN_MODEL,
     # Use the existing validation model instead of COMBAT_VALIDATION_MODEL
     DM_VALIDATION_MODEL, 
@@ -212,7 +212,7 @@ def get_combat_temperature(encounter_data, validation_attempt=0):
     return final_temp
 
 # OpenAI client
-client = OpenAI(api_key=OPENAI_API_KEY)
+client = get_llm_client()
 
 conversation_history_file = "modules/conversation_history/combat_conversation_history.json"
 second_model_history_file = "modules/conversation_history/second_model_history.json"
@@ -222,7 +222,7 @@ third_model_history_file = "modules/conversation_history/third_model_history.jso
 os.makedirs("combat_logs", exist_ok=True)
 
 # Initialize combat message compressor with API key
-combat_message_compressor = CombatUserMessageCompressor(api_key=OPENAI_API_KEY)
+combat_message_compressor = CombatUserMessageCompressor(api_key=LLM_API_KEY)
 
 # Constants for chat history generation
 HISTORY_TIMESTAMP_FORMAT = "%Y%m%d_%H%M%S"

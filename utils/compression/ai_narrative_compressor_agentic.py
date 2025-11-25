@@ -13,16 +13,16 @@ import sys
 import re
 from typing import Dict, Any, List
 from pathlib import Path
-from openai import OpenAI
+from core.ai.llm_client import get_llm_client
 
 # Load API configuration
 try:
     import config
     from model_config import NARRATIVE_COMPRESSION_MODEL
-    client = OpenAI(api_key=config.OPENAI_API_KEY)
+    client = get_llm_client()
 except ImportError as e:
     print(f"ERROR: Missing configuration file - {e}")
-    print("Please ensure both config.py (with OPENAI_API_KEY) and model_config.py exist")
+    print("Please ensure both config.py (with LLM_API_KEY) and model_config.py exist")
     sys.exit(1)
 
 # Import token tracking

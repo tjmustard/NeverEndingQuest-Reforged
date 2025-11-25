@@ -12,8 +12,8 @@ Used to enhance the combat state display with live turn tracking.
 import json
 import re
 import os
-from openai import OpenAI
-from config import OPENAI_API_KEY, DM_MAIN_MODEL
+from core.ai.llm_client import get_llm_client
+from config import DM_MAIN_MODEL
 import logging
 
 logger = logging.getLogger(__name__)
@@ -131,7 +131,7 @@ def generate_live_initiative_tracker(encounter_data, conversation_history, curre
         str: Formatted initiative tracker or None if generation fails
     """
     try:
-        if not OPENAI_API_KEY:
+        if not LLM_API_KEY:
             logger.warning("OpenAI API key not configured, cannot generate initiative tracker")
             return None
         
@@ -166,7 +166,7 @@ def generate_live_initiative_tracker(encounter_data, conversation_history, curre
         print(f"DEBUG: [INITIATIVE] Exported messages to debug/api_captures/initiative_messages_to_api.json")
         
         # Query AI model
-        client = OpenAI(api_key=OPENAI_API_KEY)
+        client = get_llm_client()
         response = client.chat.completions.create(
             model=DM_MAIN_MODEL,
             messages=api_messages,

@@ -52,8 +52,8 @@ Features:
 import json
 import os
 import sys
-from openai import OpenAI
-from config import OPENAI_API_KEY, LEVEL_UP_MODEL, DM_VALIDATION_MODEL
+from core.ai.llm_client import get_llm_client
+from config import LEVEL_UP_MODEL, DM_VALIDATION_MODEL
 from utils.file_operations import safe_read_json
 from updates.update_character_info import update_character_info, normalize_character_name
 from utils.encoding_utils import safe_json_dump
@@ -67,7 +67,7 @@ except ImportError:
     USAGE_TRACKING_AVAILABLE = False
 
 # Initialize OpenAI client
-client = OpenAI(api_key=OPENAI_API_KEY)
+client = get_llm_client()
 
 # --- Class-based Level Up Manager ---
 

@@ -17,18 +17,18 @@ import requests
 from io import BytesIO
 
 try:
-    from openai import OpenAI
-    OPENAI_AVAILABLE = True
+    from core.ai.llm_client import get_llm_client
+    LLM_AVAILABLE = True
 except ImportError:
-    OPENAI_AVAILABLE = False
-    print("Warning: OpenAI library not available")
+    LLM_AVAILABLE = False
+    print("Warning: LLM library not available. Image generation will be disabled.")
 
-# Import API key from config
+# Try to import the API key from config
 try:
-    from config import OPENAI_API_KEY
+    from config import LLM_API_KEY
 except ImportError:
-    OPENAI_API_KEY = None
-    print("Warning: Could not import OPENAI_API_KEY from config.py")
+    LLM_API_KEY = None
+    print("Warning: Could not import LLM_API_KEY from config.py")
 
 class NPCGenerator:
     """Service for generating NPC portrait images in various styles"""
@@ -36,9 +36,9 @@ class NPCGenerator:
     def __init__(self, api_key: Optional[str] = None):
         """Initialize the NPC generator"""
         # Use provided key or fall back to config
-        self.api_key = api_key or OPENAI_API_KEY
-        if self.api_key and OPENAI_AVAILABLE:
-            self.client = OpenAI(api_key=self.api_key)
+        self.api_key = api_key or LLM_API_KEY
+        if self.api_key and LLM_AVAILABLE:
+            self.client = get_llm_client()
         else:
             self.client = None
         
@@ -145,7 +145,7 @@ class NPCGenerator:
         if not self.client:
             return {
                 "success": False,
-                "error": "OpenAI client not initialized"
+                "error": "LLM client not initialized"
             }
         
         # Get style data

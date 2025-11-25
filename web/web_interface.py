@@ -43,8 +43,7 @@ with separate panels for game output and debug information.
 import logging
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
-from flask import Flask, render_template, request, jsonify, Response
-from flask_socketio import SocketIO, emit
+# Standard library imports
 import os
 import sys
 import json
@@ -57,11 +56,21 @@ from collections import deque
 import io
 import zipfile
 from contextlib import redirect_stdout, redirect_stderr
-from openai import OpenAI
+
+# Add parent directory to path BEFORE importing core modules
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Third-party imports
+from flask import Flask, render_template, request, jsonify, Response, send_from_directory
+from flask_socketio import SocketIO, emit
 from PIL import Image
 
-# Add parent directory to path so we can import from utils, core, etc.
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Import from main game
+import main as dm_main
+
+# Core imports - these require the path to be set above
+from core.ai.llm_client import get_llm_client
+
 
 # Token tracking import
 try:
@@ -1108,8 +1117,7 @@ def get_monsters():
         pack_name = request.args.get('pack', 'photorealistic')
         
         # Use a temporary generator instance to get monster list
-        from config import OPENAI_API_KEY
-        generator = MonsterGenerator(api_key=OPENAI_API_KEY)
+        generator = MonsterGenerator(api_key=config.LLM_API_KEY)
         monsters = generator.get_monster_list(pack_name=pack_name)
         return jsonify(monsters)
     except Exception as e:
@@ -1206,8 +1214,7 @@ def generate_monsters():
         
         def run_generation():
             try:
-                from config import OPENAI_API_KEY
-                generator = MonsterGenerator(api_key=OPENAI_API_KEY)
+                generator = MonsterGenerator(api_key=config.LLM_API_KEY)
                 
                 # Create progress callback
                 def progress_callback(progress_data):
@@ -1586,8 +1593,7 @@ def promote_to_bestiary():
         The description should be concise (around 100-150 words) and focus on its appearance, typical behavior, and combat tactics.
         Make it sound like an entry from an official monster manual. Do not include stat blocks."""
         
-        from config import OPENAI_API_KEY
-        client = OpenAI(api_key=OPENAI_API_KEY)
+        client = get_llm_client()
         
         response = client.chat.completions.create(
             model=DM_MINI_MODEL,
@@ -2925,7 +2931,7 @@ def handle_generate_image(data):
         from utils.file_operations import safe_read_json, safe_write_json
         
         # Initialize OpenAI client
-        client = OpenAI(api_key=config.OPENAI_API_KEY)
+        client = get_llm_client()
         
         # Try to generate image
         try:
@@ -3579,23 +3585,23 @@ def fetch_npc_descriptions():
     def generate_descriptions():
         try:
             import time
-            from openai import OpenAI
+            from core.ai.llm_client import get_llm_client
             from utils.file_operations import safe_read_json, safe_write_json
             from utils.encoding_utils import sanitize_text
             
             # Get API key
             try:
-                from config import OPENAI_API_KEY
+                from config import LLM_API_KEY
             except ImportError:
-                OPENAI_API_KEY = None
-                error("TOOLKIT: OpenAI API key not found")
+                LLM_API_KEY = None
+                error("TOOLKIT: LLM API key not found")
                 return
             
-            if not OPENAI_API_KEY:
-                error("TOOLKIT: OpenAI API key not configured")
+            if not LLM_API_KEY:
+                error("TOOLKIT: LLM API key not configured")
                 return
                 
-            client = OpenAI(api_key=OPENAI_API_KEY)
+            client = get_llm_client()
             
             # Load NPC compendium
             npc_compendium_path = 'data/bestiary/npc_compendium.json'
@@ -3888,18 +3894,18 @@ def generate_npc_portraits():
             
             # Get API key
             try:
-                from config import OPENAI_API_KEY
+                from config import LLM_API_KEY
             except ImportError:
-                OPENAI_API_KEY = None
-                error("TOOLKIT: OpenAI API key not found")
+                LLM_API_KEY = None
+                error("TOOLKIT: LLM API key not found")
                 return
             
-            if not OPENAI_API_KEY:
-                error("TOOLKIT: OpenAI API key not configured")
+            if not LLM_API_KEY:
+                error("TOOLKIT: LLM API key not configured")
                 return
                 
             # Initialize NPC generator
-            generator = NPCGenerator(api_key=OPENAI_API_KEY)
+            generator = NPCGenerator(api_key=LLM_API_KEY)
             
             # Load descriptions from NPC compendium first
             npc_compendium_path = 'data/bestiary/npc_compendium.json'

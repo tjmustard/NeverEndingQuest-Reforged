@@ -18,7 +18,7 @@ from utils.encoding_utils import safe_json_load, safe_json_dump
 from utils.file_operations import safe_read_json, safe_write_json
 from utils.module_path_manager import ModulePathManager
 from updates.update_character_info import normalize_character_name
-from openai import OpenAI
+from core.ai.llm_client import get_llm_client
 import config
 
 # Import OpenAI usage tracking (safe - won't break if fails)
@@ -34,7 +34,7 @@ from utils.enhanced_logger import set_script_name
 set_script_name(os.path.basename(__file__))
 
 # Initialize OpenAI client
-client = OpenAI(api_key=config.OPENAI_API_KEY)
+client = get_llm_client()
 
 EFFECTS_TRACKER_FILE = "modules/effects_tracker.json"
 

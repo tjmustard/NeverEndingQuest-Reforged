@@ -39,11 +39,11 @@
 # ============================================================================
 
 import json
-from openai import OpenAI
-from config import OPENAI_API_KEY, ACTION_PREDICTION_MODEL
+from core.ai.llm_client import get_llm_client
+from config import ACTION_PREDICTION_MODEL
 
 # Initialize OpenAI client
-client = OpenAI(api_key=OPENAI_API_KEY)
+client = get_llm_client()
 
 # Action prediction system prompt (condensed from full system analysis)
 ACTION_PREDICTION_PROMPT = """You are an action prediction agent for the world's most popular 5th edition roleplaying game AI system. Analyze user input to determine if it requires JSON actions in the AI response.

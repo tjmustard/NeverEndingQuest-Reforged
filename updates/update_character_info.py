@@ -103,7 +103,6 @@ import shutil
 import os
 from datetime import datetime
 from jsonschema import validate, ValidationError
-from openai import OpenAI
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Tuple, Dict, Any, Optional
 
@@ -117,7 +116,8 @@ except:
 import time
 import re
 # Import model configuration from config.py
-from config import OPENAI_API_KEY, PLAYER_INFO_UPDATE_MODEL, NPC_INFO_UPDATE_MODEL
+from config import PLAYER_INFO_UPDATE_MODEL, NPC_INFO_UPDATE_MODEL
+from core.ai.llm_client import get_llm_client
 from utils.module_path_manager import ModulePathManager
 from utils.file_operations import safe_write_json, safe_read_json
 from utils.encoding_utils import safe_json_load
@@ -128,7 +128,7 @@ from utils.enhanced_logger import debug, info, warning, error, set_script_name
 # Set script name for logging
 set_script_name(__name__)
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+client = get_llm_client()
 
 # Constants
 TEMPERATURE = 0.7

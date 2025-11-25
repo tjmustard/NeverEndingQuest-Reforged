@@ -44,7 +44,7 @@ import json
 import logging
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
-from openai import OpenAI
+from core.ai.llm_client import get_llm_client
 
 # Import OpenAI usage tracking (safe - won't break if fails)
 try:
@@ -54,7 +54,7 @@ except:
     USAGE_TRACKING_AVAILABLE = False
     def track_response(r): pass
 
-from config import OPENAI_API_KEY, CHARACTER_VALIDATOR_MODEL
+from config import CHARACTER_VALIDATOR_MODEL
 from utils.file_operations import safe_read_json, safe_write_json
 from utils.module_path_manager import ModulePathManager
 
@@ -62,7 +62,7 @@ class AICharacterEffectsValidator:
     def __init__(self):
         """Initialize AI-powered effects validator"""
         self.logger = logging.getLogger(__name__)
-        self.client = OpenAI(api_key=OPENAI_API_KEY)
+        self.client = get_llm_client()
         self.corrections_made = []
         # Get current module from party tracker for consistent path resolution
         try:

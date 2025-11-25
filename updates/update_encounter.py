@@ -6,12 +6,12 @@
 import json
 import os
 from jsonschema import validate, ValidationError
-from openai import OpenAI
 import time
 import re
 import copy
 # Import model configuration from config.py
-from config import OPENAI_API_KEY, ENCOUNTER_UPDATE_MODEL
+from config import ENCOUNTER_UPDATE_MODEL
+from core.ai.llm_client import get_llm_client
 
 # Import OpenAI usage tracking (safe - won't break if fails)
 try:
@@ -32,7 +32,7 @@ set_script_name("update_encounter")
 # Constants
 TEMPERATURE = 0.7
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+client = get_llm_client()
 
 def load_encounter_schema():
     with open("schemas/encounter_schema.json", "r") as schema_file:

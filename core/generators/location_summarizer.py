@@ -22,7 +22,7 @@ from dataclasses import dataclass
 
 # Import local modules
 from utils.token_estimator import TokenEstimator
-from openai import OpenAI
+from core.ai.llm_client import get_llm_client
 import config
 from utils.enhanced_logger import debug, info, warning, error, set_script_name
 
@@ -50,7 +50,7 @@ class LocationSummarizer:
         self.summarization_history = []
         
         # Initialize OpenAI client
-        self.client = OpenAI(api_key=config.OPENAI_API_KEY)
+        self.client = get_llm_client()
         
         # No artificial compression parameters - purely agentic AI generation
         

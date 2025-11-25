@@ -33,7 +33,7 @@ import json
 import os
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple
-from openai import OpenAI
+from core.ai.llm_client import get_llm_client
 import config
 from utils.encoding_utils import safe_json_load, safe_json_dump
 from utils.module_path_manager import ModulePathManager
@@ -48,7 +48,7 @@ class StorageProcessor:
     
     def __init__(self):
         """Initialize storage processor"""
-        self.client = OpenAI(api_key=config.OPENAI_API_KEY)
+        self.client = get_llm_client()
         self.model = config.DM_MAIN_MODEL  # Use full model, not mini
         self.schema_file = "schemas/storage_action_schema.json"
         # Get current module from party tracker for consistent path resolution

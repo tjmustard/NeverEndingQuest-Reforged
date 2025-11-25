@@ -40,12 +40,12 @@ import json
 import random
 from typing import Dict, List, Any, Tuple
 from dataclasses import dataclass
-from openai import OpenAI
-from config import OPENAI_API_KEY, DM_MAIN_MODEL
+from core.ai.llm_client import get_llm_client
+from config import DM_MAIN_MODEL
 from utils.module_path_manager import ModulePathManager
 
 # Initialize OpenAI client
-client = OpenAI(api_key=OPENAI_API_KEY)
+client = get_llm_client()
 
 @dataclass
 class AreaConfig:

@@ -98,10 +98,10 @@ def call_mini_model_for_name(full_name: str) -> str:
     Raises:
         Exception: If API call fails
     """
-    from config import OPENAI_API_KEY
+    from config import LLM_API_KEY
 
     # Initialize OpenAI client
-    client = openai.OpenAI(api_key=OPENAI_API_KEY)
+    client = openai.OpenAI(api_key=LLM_API_KEY)
 
     prompt = f"""Extract the person's actual first name from this D&D character name: '{full_name}'
 

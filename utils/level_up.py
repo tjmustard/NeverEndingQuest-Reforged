@@ -6,11 +6,11 @@
 # level_up.py - Simplified level up system that returns changes dict
 
 import json
-from openai import OpenAI
-from config import OPENAI_API_KEY, LEVEL_UP_MODEL
+from core.ai.llm_client import get_llm_client
+from config import LEVEL_UP_MODEL
 from .file_operations import safe_read_json
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+client = get_llm_client()
 
 def load_leveling_info():
     """Load leveling information from text file"""
